@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SmartCompanion | Volunteer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Prompt',sans-serif;
+}
+
+body{
+  min-height:100vh;
+  background:linear-gradient(135deg,#071018,#0f2027,#1c3b4d);
+  color:#fff;
+}
+
+/* HEADER */
+.header{
+  text-align:center;
+  padding:30px;
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+
+.header h1{
+  font-size:32px;
+}
+
+.header p{
+  opacity:.8;
+  margin-top:6px;
+}
+
+/* MENU */
+.menu{
+  margin-top:15px;
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.menu a{
+  text-decoration:none;
+  padding:10px 14px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+  font-size:14px;
+  transition:.2s;
+}
+
+.menu a:hover{
+  transform:translateY(-2px);
+  background:rgba(0,229,255,0.15);
+}
+
+/* CONTAINER */
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:30px 20px;
+}
+
+/* STATS */
+.stat-box{
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-bottom:20px;
+  gap:15px;
+}
+
+.stat{
+  background:rgba(255,255,255,0.08);
+  padding:15px 18px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.1);
+}
+
+.stat-title{
+  font-size:12px;
+  opacity:.7;
+}
+
+.stat-value{
+  font-size:22px;
+  font-weight:600;
+}
+
+/* EMPTY */
+.empty{
+  text-align:center;
+  padding:60px;
+  background:rgba(255,255,255,0.06);
+  border-radius:18px;
+}
+
+/* GRID */
+.case-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:18px;
+}
+
+/* CARD */
+.case-card{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px;
+  padding:20px;
+  transition:.2s;
+}
+
+.case-card:hover{
+  transform:translateY(-4px);
+}
+
+/* TOP */
+.card-top{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+
+.case-name{
+  font-size:18px;
+  font-weight:600;
+}
+
+.case-id{
+  font-size:12px;
+  opacity:.7;
+}
+
+/* BADGE */
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+}
+
+.urgent{
+  background:#ff4d4d;
+  color:#fff;
+}
+
+.normal{
+  background:#00e5ff;
+  color:#003344;
+}
+
+/* DETAIL */
+.detail-box{
+  background:rgba(0,0,0,0.2);
+  padding:12px;
+  border-radius:12px;
+  margin:10px 0;
+  font-size:14px;
+}
+
+/* BUTTON */
+.accept-btn{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,#00e5ff,#00c853);
+  color:#003344;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.accept-btn:hover{
+  transform:scale(1.02);
+}
+.logout-btn{
+  background: rgba(255, 0, 0, 0.15) !important;
+  border: 1px solid rgba(255, 60, 60, 0.35) !important;
+  color: #ffdddd !important;
+  transition: .25s;
+}
+
+.logout-btn:hover{
+  background: rgba(255, 60, 60, 0.28) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(255, 60, 60, 0.25);
+}
+</style>
+</head>
+
+<body>
+
+<% const list = Array.isArray(data) ? data : []; %>
+
+<div class="header">
+  <h1>🧑‍🤝‍🧑 Volunteer Center</h1>
+  <p>ระบบช่วยเหลือผู้สูงอายุ SmartCompanion</p>
+
+  <div class="menu">
+    <a href="/volunteer/mycase">📂 เคสของฉัน</a>
+    <a href="/volunteer/history">📜 ประวัติ</a>
+    <a href="/volunteer/edit-profile">✏️ แก้ไขข้อมูล</a>
+<a href="/logout" class="logout-btn">🚪 ออกจากระบบ</a>  </div>
+</div>
+
+<div class="container">
+
+  <!-- STATS -->
+  <div class="stat-box">
+    <div class="stat">
+      <div class="stat-title">เคสรอรับ</div>
+      <div class="stat-value"><%= list.length %></div>
+    </div>
+
+    
+  </div>
+
+  <!-- EMPTY -->
+  <% if(list.length === 0){ %>
+    <div class="empty">🤍 ยังไม่มีเคสรอรับในขณะนี้</div>
+  <% } %>
+
+  <!-- GRID -->
+  <div class="case-grid">
+
+  <% list.forEach(row => { %>
+
+    <div class="case-card">
+
+      <div class="card-top">
+        <div>
+          <div class="case-name">👵 <%= row.elder_name || "ผู้สูงอายุ" %></div>
+          <div class="case-id">CASE #<%= row.id %></div>
+        </div>
+
+        
+      </div>
+
+      <div class="detail-box">
+        <%= row.detail || "ไม่มีรายละเอียด" %>
+      </div>
+
+      <form action="/volunteer/accept/<%= row.id %>" method="POST">
+        <button class="accept-btn">รับเคสนี้ 🤝</button>
+      </form>
+
+    </div>
+
+  <% }) %>
+
+  </div>
+
+</div>
+
+</body>
+</html>

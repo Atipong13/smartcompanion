@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>เคสกำลังดำเนินการ | SmartCompanion</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Prompt',sans-serif;
+}
+
+body{
+  background:#0f172a;
+  color:#fff;
+  display:flex;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:260px;
+  background:rgba(15,23,42,.95);
+  border-right:1px solid rgba(255,255,255,.05);
+  backdrop-filter:blur(18px);
+  padding:30px 20px;
+}
+
+.logo{
+  font-size:24px;
+  font-weight:600;
+  margin-bottom:40px;
+}
+
+.sidebar a{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:#cbd5e1;
+  text-decoration:none;
+  padding:14px 16px;
+  border-radius:16px;
+  margin-bottom:10px;
+  transition:.25s;
+}
+
+.sidebar a:hover{
+  background:#2563eb;
+  color:#fff;
+  transform:translateX(4px);
+}
+
+/* MAIN */
+
+.main{
+  flex:1;
+  padding:30px;
+}
+
+/* TOPBAR */
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:30px;
+}
+
+.topbar h1{
+  font-size:30px;
+}
+
+/* SEARCH */
+
+.search-box{
+  margin-bottom:25px;
+}
+
+.search-box input{
+  width:100%;
+  padding:14px 18px;
+  border:none;
+  border-radius:18px;
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  outline:none;
+  font-size:14px;
+}
+
+.search-box input::placeholder{
+  color:#94a3b8;
+}
+
+/* KPI */
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+  margin-bottom:30px;
+}
+
+.kpi-card{
+  background:linear-gradient(
+    135deg,
+    rgba(37,99,235,.95),
+    rgba(59,130,246,.7)
+  );
+
+  border-radius:24px;
+  padding:25px;
+
+  position:relative;
+  overflow:hidden;
+
+  box-shadow:
+    0 15px 40px rgba(37,99,235,.25);
+
+  transition:.25s;
+}
+
+.kpi-card:hover{
+  transform:translateY(-5px);
+}
+
+.kpi-card::before{
+  content:'';
+  position:absolute;
+  width:150px;
+  height:150px;
+  background:rgba(255,255,255,.08);
+  border-radius:50%;
+  top:-40px;
+  right:-40px;
+}
+
+.kpi-title{
+  color:#dbeafe;
+  font-size:14px;
+}
+
+.kpi-value{
+  font-size:40px;
+  margin-top:10px;
+  font-weight:600;
+}
+
+/* GRID */
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:24px;
+}
+
+/* CARD */
+
+.card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.06);
+
+  backdrop-filter:blur(18px);
+
+  border-radius:24px;
+  padding:25px;
+
+  transition:.25s;
+  position:relative;
+  overflow:hidden;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+  box-shadow:0 20px 40px rgba(0,0,0,.25);
+}
+
+.card::before{
+  content:'';
+  position:absolute;
+  width:180px;
+  height:180px;
+  background:rgba(255,255,255,.03);
+  border-radius:50%;
+  top:-70px;
+  right:-70px;
+}
+
+/* TOP */
+
+.case-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:20px;
+}
+
+.case-id{
+  font-size:22px;
+  font-weight:600;
+}
+
+/* STATUS */
+
+.badge{
+  padding:8px 16px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.accepted{
+  background:#f59e0b33;
+  color:#fbbf24;
+}
+
+.completed{
+  background:#16a34a33;
+  color:#4ade80;
+}
+
+.pending{
+  background:#dc262633;
+  color:#f87171;
+}
+
+/* DETAILS */
+
+.details{
+  line-height:2;
+  color:#cbd5e1;
+  font-size:14px;
+}
+
+.label{
+  color:#94a3b8;
+}
+
+/* PROGRESS */
+
+.progress-box{
+  margin-top:20px;
+}
+
+.progress-title{
+  font-size:13px;
+  margin-bottom:8px;
+  color:#cbd5e1;
+}
+
+.progress{
+  width:100%;
+  height:10px;
+  background:#1e293b;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  width:75%;
+  background:linear-gradient(
+    90deg,
+    #3b82f6,
+    #60a5fa
+  );
+  border-radius:999px;
+}
+
+/* EMPTY */
+
+.empty{
+  text-align:center;
+  margin-top:100px;
+  color:#94a3b8;
+  font-size:18px;
+}
+
+/* MOBILE */
+
+@media(max-width:1000px){
+
+  .sidebar{
+    display:none;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+  <div class="logo">
+    🛠 SmartCompanion
+  </div>
+
+  <a href="/admin">📋 Dashboard</a>
+  <a href="/admin/working">🟢 เคสกำลังทำ</a>
+  <a href="/admin/volunteers">👥 อนุมัติอาสา</a>
+  <a href="/admin/users">👤 จัดการผู้ใช้</a>
+  <a href="/admin/reports">📊 รายงาน</a>
+  <a href="/logout">🚪 ออกจากระบบ</a>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+  <!-- TOPBAR -->
+
+  <div class="topbar">
+
+    <h1>
+      📌 Working Cases
+    </h1>
+
+  </div>
+
+  <!-- SEARCH -->
+
+  <div class="search-box">
+
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="ค้นหาเคส..."
+    >
+
+  </div>
+
+  <!-- KPI -->
+
+  <div class="kpi-grid">
+
+    <div class="kpi-card">
+
+      <div class="kpi-title">
+        เคสกำลังดำเนินการ
+      </div>
+
+      <div class="kpi-value">
+        <%= data.length %>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- EMPTY -->
+
+  <% if(!data || data.length === 0){ %>
+
+    <div class="empty">
+      ยังไม่มีเคสกำลังดำเนินการ
+    </div>
+
+  <% } %>
+
+  <!-- CARDS -->
+
+  <div class="cards-grid" id="cardsGrid">
+
+    <% data.forEach(item=>{ %>
+
+      <div
+        class="card case-card"
+data-detail="<%= (item.detail || '').toLowerCase() %>"      >
+
+        <!-- TOP -->
+
+        <div class="case-top">
+
+          <div class="case-id">
+            👴 Elder #<%= item.elder_id %>
+          </div>
+
+          <div class="badge <%= item.status %>">
+            <%= item.status %>
+          </div>
+
+        </div>
+
+        <!-- DETAILS -->
+
+        <div class="details">
+
+          <span class="label">
+            📄 รายละเอียด:
+          </span>
+
+          <br>
+
+          <%= item.detail %>
+
+          <br><br>
+
+          <span class="label">
+            🤝 อาสาที่รับเคส:
+          </span>
+
+          <br>
+
+          <strong>
+            <%= item.volunteer_name || 'ไม่พบชื่อ' %>
+          </strong>
+
+        </div>
+
+        <!-- PROGRESS -->
+
+        <div class="progress-box">
+
+          <div class="progress-title">
+            ความคืบหน้า
+          </div>
+
+          <div class="progress">
+
+            <div class="progress-bar"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    <% }) %>
+
+  </div>
+
+</div>
+
+<script>
+
+/* SEARCH */
+
+const searchInput =
+document.getElementById('searchInput');
+
+const cards =
+document.querySelectorAll('.case-card');
+
+searchInput.addEventListener('keyup',()=>{
+
+  const keyword =
+  searchInput.value.toLowerCase();
+
+  cards.forEach(card=>{
+
+    const detail =
+    card.dataset.detail;
+
+    if(detail.includes(keyword)){
+
+      card.style.display='block';
+
+    }else{
+
+      card.style.display='none';
+
+    }
+
+  });
+
+});
+
+</script>
+
+</body>
+</html>

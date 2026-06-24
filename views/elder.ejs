@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SmartCompanion | ผู้สูงอายุ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: 'Prompt', sans-serif;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, #2c5364, #203a43);
+    min-height: 100vh;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* กล่องหลัก */
+.elder-box {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    padding: 40px;
+    width: 460px;
+    max-width: 92%;
+    border-radius: 26px;
+    box-shadow: 0 25px 45px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+/* หัวข้อ */
+.elder-box h2 {
+    margin-top: 0;
+    font-size: 30px;
+    color: #e6faff;
+}
+
+.elder-box h3 {
+    margin-top: 10px;
+    font-weight: 400;
+    color: #d9f4ff;
+}
+
+/* textarea */
+.elder-box textarea {
+    width: 100%;
+    margin-top: 25px;
+    padding: 18px;
+    font-size: 18px;
+    border-radius: 18px;
+    border: none;
+    outline: none;
+    min-height: 140px;
+    resize: none;
+}
+
+.elder-box textarea::placeholder {
+    color: #777;
+}
+
+/* ปุ่ม */
+.elder-box button {
+    width: 100%;
+    margin-top: 22px;
+    padding: 18px;
+    font-size: 20px;
+    border-radius: 20px;
+    border: none;
+    background: linear-gradient(135deg, #00f2fe, #4facfe);
+    color: #003344;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.elder-box button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(0,255,255,0.4);
+}
+
+/* ลิงก์ออกจากระบบ */
+.logout {
+    display: block;
+    margin-top: 28px;
+    font-size: 15px;
+    color: #ffdddd;
+    text-decoration: none;
+}
+
+.logout:hover {
+    text-decoration: underline;
+}
+</style>
+</head>
+
+<body>
+
+<div class="elder-box">
+    <h2>👵 ผู้สูงอายุ</h2>
+    <h3>สวัสดีคุณ <%= name %></h3>
+
+    <form action="/request-help" method="post">
+        <textarea name="detail" placeholder="📝 ต้องการความช่วยเหลือเรื่องใด"></textarea>
+        <button>🆘 ขอความช่วยเหลือ</button>
+    </form>
+
+    <a href="/" class="logout">🚪 ออกจากระบบ</a>
+</div>
+
+</body>
+</html>

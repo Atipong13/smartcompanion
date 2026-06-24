@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ขอความช่วยเหลือ</title>
+
+<style>
+body{
+  font-family: Arial;
+  background:#f4f6f9;
+  margin:0;
+}
+
+.nav{
+  background:#2c3e50;
+  color:#fff;
+  padding:15px;
+}
+
+.container{
+  max-width:600px;
+  margin:40px auto;
+}
+
+.card{
+  background:#fff;
+  padding:25px;
+  border-radius:12px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.1);
+}
+
+h2{
+  margin-top:0;
+}
+
+input,textarea,select{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  background:#27ae60;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#219150;
+}
+
+.urgent{
+  background:#ffe6e6;
+  padding:10px;
+  border-radius:8px;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+  SmartCompanion | ขอความช่วยเหลือ
+</div>
+
+<div class="container">
+  <div class="card">
+
+    <h2>🆘 ขอความช่วยเหลือ</h2>
+    <p>ระบบจะส่งคำขอไปยังอาสาใกล้คุณ</p>
+
+    <form method="POST" action="/help">
+
+      <textarea name="detail" required placeholder="ต้องการความช่วยเหลือเรื่องอะไร"></textarea>
+
+      <label>ระดับความเร่งด่วน</label>
+      <select name="urgency">
+        <option value="normal">ปกติ</option>
+        <option value="urgent">🚨 เร่งด่วน</option>
+      </select>
+
+      <button>ส่งคำขอ</button>
+    </form>
+
+    <div style="margin-top:15px; color:#777;">
+      SmartCompanion อยู่เคียงข้างคุณ ❤️
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

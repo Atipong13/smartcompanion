@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SmartCompanion Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Prompt',sans-serif;
+}
+
+/* พื้นหลังขาวเรียบ */
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#ffffff;
+    overflow:hidden;
+    position:relative;
+}
+
+/* เอฟเฟคแสงพื้นหลัง */
+body::before{
+    content:"";
+    position:absolute;
+    width:500px;
+    height:500px;
+    background:radial-gradient(circle,#0099ff55,transparent 70%);
+    top:-150px;
+    left:-100px;
+    animation:floatLight 8s ease-in-out infinite;
+}
+
+body::after{
+    content:"";
+    position:absolute;
+    width:450px;
+    height:450px;
+    background:radial-gradient(circle,#4facfe44,transparent 70%);
+    bottom:-180px;
+    right:-100px;
+    animation:floatLight2 10s ease-in-out infinite;
+}
+
+@keyframes floatLight{
+    0%{transform:translateY(0);}
+    50%{transform:translateY(30px);}
+    100%{transform:translateY(0);}
+}
+
+@keyframes floatLight2{
+    0%{transform:translateY(0);}
+    50%{transform:translateY(-25px);}
+    100%{transform:translateY(0);}
+}
+
+/* กล่อง Login */
+.login-box{
+    position:relative;
+    width:360px;
+    padding:40px;
+    border-radius:24px;
+    background:#ffffff;
+    z-index:2;
+
+    /* ขอบเรืองแสง */
+    border:1px solid rgba(0,217,255,0.35);
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,0.08),
+        0 0 25px rgba(0,217,255,0.15);
+
+    animation:glowBox 4s ease-in-out infinite;
+}
+
+/* เอฟเฟคไฟรอบกรอบ */
+@keyframes glowBox{
+    0%{
+        box-shadow:
+        0 10px 30px rgba(0,0,0,0.08),
+        0 0 15px rgba(0,217,255,0.12);
+    }
+
+    50%{
+        box-shadow:
+        0 10px 30px rgba(0,0,0,0.08),
+        0 0 35px rgba(0,217,255,0.35);
+    }
+
+    100%{
+        box-shadow:
+        0 10px 30px rgba(0,0,0,0.08),
+        0 0 15px rgba(0,217,255,0.12);
+    }
+}
+
+.login-box h2{
+    text-align:center;
+    margin-bottom:8px;
+    color:#1c2b36;
+    font-size:28px;
+}
+
+.login-box p{
+    text-align:center;
+    margin-bottom:25px;
+    color:#6d7b88;
+    font-size:14px;
+}
+
+/* Input */
+.login-box input{
+    width:100%;
+    padding:14px 16px;
+    margin-bottom:16px;
+    border-radius:14px;
+    border:1px solid #dbe7f0;
+    background:#f8fbff;
+    outline:none;
+    font-size:15px;
+    transition:0.3s;
+}
+
+.login-box input:focus{
+    border-color:#00d9ff;
+    box-shadow:0 0 12px rgba(0,217,255,0.25);
+    background:#fff;
+}
+
+/* ปุ่ม */
+.login-box button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(135deg,#00d9ff,#4facfe);
+    color:#fff;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.login-box button:hover{
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(79,172,254,0.35);
+}
+
+/* ปุ่มสมัคร */
+.btn-register{
+    display:inline-block;
+    width:100%;
+    margin-top:14px;
+    text-align:center;
+    padding:13px;
+    border-radius:14px;
+    text-decoration:none;
+    background:#ff0000;
+    color:#ffffff;
+    font-weight:500;
+    transition:0.3s;
+}
+
+.btn-register:hover{
+    background:#dff2ff;
+    box-shadow:0 0 15px rgba(0, 217, 255, 0.18);
+}
+
+/* แจ้งเตือน */
+.alert-error{
+    background:#ffe8e8;
+    color:#ff4d4f;
+    padding:12px;
+    border-radius:12px;
+    margin-bottom:15px;
+    text-align:center;
+}
+
+.alert-success{
+    background:#e8fff2;
+    color:#00a86b;
+    padding:12px;
+    border-radius:12px;
+    margin-bottom:15px;
+    text-align:center;
+}
+
+/* footer */
+.footer-text{
+    text-align:center;
+    margin-top:18px;
+    font-size:12px;
+    color:#0084ff;
+}
+.btn-forgot{
+    display:block;
+    width:100%;
+    text-align:center;
+    margin-top:12px;
+    padding:14px;
+    border-radius:14px;
+    text-decoration:none;
+    background:rgba(255,255,255,.08);
+    color:#1100ff;
+    border:1px solid rgba(255,255,255,.15);
+    transition:.25s;
+    font-weight:500;
+}
+
+.btn-forgot:hover{
+    background:rgba(255,255,255,.15);
+    transform:translateY(-2px);
+}
+.password-wrapper{
+  position:relative;
+  width:100%;
+}
+
+.password-wrapper input{
+  width:100%;
+  padding-right:45px; /* เว้นที่ให้รูปตา */
+}
+
+.eye{
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  cursor:pointer;
+  user-select:none;
+  font-size:18px;
+  opacity:.7;
+}
+
+.eye:hover{
+  opacity:1;
+}
+</style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>🤖 SmartCompanion</h2>
+    <p>ผู้ช่วยอาสาอัจฉริยะ & เพื่อนคุยผู้สูงอายุ</p>
+
+    <% if (error) { %>
+    <div class="alert-error">
+        <%= error %>
+    </div>
+    <% } %>
+
+    <% if (success) { %>
+    <div class="alert-success">
+        <%= success %>
+    </div>
+    <% } %>
+
+ <form id="loginForm" method="post" action="/login" autocomplete="off">
+
+    <input name="phone" type="text"
+        placeholder="📱 เบอร์โทรศัพท์"
+        required maxlength="10"
+        pattern="[0-9]{10}"
+        inputmode="numeric"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+
+    <div class="password-wrapper">
+        <input id="password" name="password" type="password"
+            placeholder="🔒 รหัสผ่าน"
+            required minlength="4" maxlength="30"
+            pattern="[A-Za-z0-9]+"
+            oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'')">
+
+        <span class="eye" onclick="togglePassword()">👁</span>
+    </div>
+
+    <button type="submit">เข้าสู่ระบบ</button>
+</form>
+
+    <div style="text-align:center;margin:15px 0;opacity:.7;">หรือ</div>
+
+    <a href="/volunteer/register/" class="btn-register">
+        🧑‍🤝‍🧑 สมัครอาสาใหม่
+    </a>
+
+    <a href="/forgot-password" class="btn-forgot">
+        🔑 ลืมรหัสผ่าน
+    </a>
+
+    <div class="footer-text">
+        ระบบอัจฉริยะเพื่อความอบอุ่นใจ ❤️
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const errorBox = document.querySelector(".alert-error");
+
+    if (!errorBox) return;
+
+    let text = errorBox.innerText;
+
+    // รองรับทั้ง "ล็อก" และ "ล็อค"
+    if (text.includes("ล็อก") || text.includes("ล็อค")) {
+
+        let sec = 60;
+
+        // disable form ตอนล็อก
+        const inputs = document.querySelectorAll("#loginForm input, #loginForm button");
+        inputs.forEach(el => el.disabled = true);
+
+        const timer = setInterval(() => {
+
+            sec--;
+
+            if (sec <= 0) {
+                clearInterval(timer);
+                location.reload();
+            } else {
+                errorBox.innerText =
+                    `⛔ ถูกล็อกระบบ เหลือ ${sec} วินาที`;
+            }
+
+        }, 1000);
+        
+    }
+
+});
+function togglePassword() {
+    const input = document.getElementById("password");
+
+    if (input.type === "password") {
+        input.type = "text";
+    } else {
+        input.type = "password";
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,352 @@
+require("dotenv").config();
+
+const line        = require("@line/bot-sdk");
+const express     = require("express");
+const session     = require("express-session");
+const path        = require("path");
+const fs          = require("fs");
+const cron        = require("node-cron");
+
+const db            = require("./config/db");
+const helpRoute     = require("./routes/help");
+const activityRoute = require("./routes/activity");
+const forgetRoutes  = require("./routes/forget");
+
+const { init: initPush, safePush } = require("./utils/safePush");
+const generateVoice = require("./utils/voiceService");
+
+const { handleLocation }     = require("./handlers/locationHandler");
+const { handleCasePostback } = require("./handlers/caseHandler");
+const { handleCaseChat }     = require("./handlers/chatHandler");
+const { handleAIText, handleAIAudio } = require("./handlers/aiHandler");
+
+/* ================= APP SETUP ================= */
+const app        = express();
+const userStates = {};
+
+const audioDir = path.join(process.cwd(), "public/audio");
+if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+
+app.use("/audio", express.static(audioDir, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".mp3")) res.setHeader("Content-Type", "audio/mpeg");
+    if (filePath.endsWith(".m4a")) res.setHeader("Content-Type", "audio/mp4");
+  }
+}));
+
+/* ================= LINE CONFIG ================= */
+const config = {
+  channelSecret:      process.env.LINE_CHANNEL_SECRET,
+  channelAccessToken: process.env.LINE_CHANNEL_TOKEN,
+};
+const client = new line.Client(config);
+initPush(client); // ✅ ส่ง client ให้ safePush ใช้
+
+const ELDER_MENU_ID     = "richmenu-d003829b8b0e855887e6b0d16d13b01e";
+const VOLUNTEER_MENU_ID = "richmenu-4c00a8ef07910382924ce46b4b1f2d77";
+
+async function syncRichMenu(userId) {
+  try {
+    const [users] = await db.query("SELECT role, status FROM users WHERE line_user_id=?", [userId]);
+    if (!users.length) return;
+    const { role, status } = users[0];
+    const menuId = role === "volunteer" && status === "approved" ? VOLUNTEER_MENU_ID : ELDER_MENU_ID;
+    try { await client.unlinkRichMenuFromUser(userId); } catch (e) {}
+    await client.linkRichMenuToUser(userId, menuId);
+    console.log(`✅ Rich Menu: role=${role}, status=${status} → ${menuId}`);
+  } catch (err) {
+    console.log("❌ syncRichMenu error:", err.response?.data || err.message);
+  }
+}
+
+/* ================= CRON ================= */
+let cronRunning = false;
+cron.schedule("* * * * *", async () => {
+  if (cronRunning) return;
+  cronRunning = true;
+  try {
+    const now = new Date();
+
+    // แจ้งเตือนกิจกรรม
+    const [rows] = await db.query(`
+      SELECT a.*, u.line_user_id FROM activities a
+      JOIN users u ON a.created_by=u.id
+      WHERE a.status='pending' AND a.activity_time <= ?
+      AND (a.last_notified_at IS NULL OR TIMESTAMPDIFF(MINUTE, a.last_notified_at, NOW()) >= 2)
+    `, [now]);
+
+    for (const act of rows) {
+      try {
+        await safePush(act.line_user_id, {
+          type: "template", altText: "แจ้งเตือนกิจกรรม",
+          template: {
+            type: "buttons", title: "⏰ แจ้งเตือนกิจกรรม",
+            text: act.title.substring(0, 60),
+            actions: [{ type: "postback", label: "รับทราบ", data: "ack_" + act.id }]
+          }
+        });
+        await db.query("UPDATE activities SET last_notified_at=NOW() WHERE id=?", [act.id]);
+        await new Promise(r => setTimeout(r, 800));
+      } catch (err) {
+        console.log("❌ Push Error:", err.response?.data || err.message);
+      }
+    }
+
+    // ออก AI mode อัตโนมัติ (ไม่โต้ตอบ 2 นาที)
+    const [expired] = await db.query(`
+      SELECT id, line_user_id FROM users
+      WHERE ai_mode=1 AND ai_last_active IS NOT NULL
+      AND TIMESTAMPDIFF(MINUTE, ai_last_active, NOW()) >= 2
+    `);
+    for (const u of expired) {
+      await db.query("UPDATE users SET ai_mode=0 WHERE id=?", [u.id]);
+      await safePush(u.line_user_id, { type: "text", text: "⏱ ไม่มีการใช้งาน AI ครบ 2 นาที\nออกจากโหมด AI อัตโนมัติแล้ว 👋" });
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } catch (err) {
+    console.log("❌ Cron error:", err);
+  }
+  cronRunning = false;
+});
+
+/* ================= WEBHOOK ================= */
+app.post("/webhook", line.middleware(config), async (req, res) => {
+  try {
+    await Promise.all(req.body.events.map(handleEvent));
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook Error:", err);
+    res.sendStatus(500);
+  }
+});
+
+/* ================= EVENT HANDLER ================= */
+async function handleEvent(event) {
+  if (!event.source?.userId) return null;
+
+  const userId = event.source.userId;
+
+  // ดึง/สร้าง user
+  let name = "User";
+  try { name = (await client.getProfile(userId)).displayName; } catch (e) {}
+
+  const [users] = await db.query("SELECT * FROM users WHERE line_user_id=?", [userId]);
+  let user;
+
+  if (!users.length) {
+    const [result] = await db.query(
+      "INSERT INTO users (line_user_id, name, role, status) VALUES (?, ?, 'elder', 'approved')",
+      [userId, name]
+    );
+    user = { id: result.insertId, line_user_id: userId, role: "elder", status: "approved" };
+  } else {
+    await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
+    user = users[0];
+  }
+
+  // follow
+  if (event.type === "follow") {
+    await syncRichMenu(userId);
+    return null;
+  }
+
+  // postback
+  if (event.type === "postback") {
+    const caseReply = await handleCasePostback(event, user, client, userStates);
+    if (caseReply) return client.replyMessage(event.replyToken, caseReply);
+
+    const actRes = await activityRoute.handlePostback(event, client, user, userStates);
+    if (actRes) return client.replyMessage(event.replyToken, actRes);
+
+    const helpRes = await helpRoute.handlePostback(event, user);
+    if (helpRes) return client.replyMessage(event.replyToken, helpRes);
+
+    return null;
+  }
+
+  // case_chat mode
+  if (userStates[userId]?.mode === "case_chat") {
+    const reply = await handleCaseChat(event, userId, userStates, client);
+    if (reply) return client.replyMessage(event.replyToken, reply);
+    return null;
+  }
+
+  // message
+  if (event.type === "message") {
+    if (!event.message) return null;
+
+    // location
+    if (event.message.type === "location") return handleLocation(event, user, client);
+
+    // audio
+    if (event.message.type === "audio") {
+      if (user.ai_mode == 1) return handleAIAudio(event, user, client);
+      const helpRes = await helpRoute.handleMessage(event, user);
+      if (helpRes) return client.replyMessage(event.replyToken, helpRes);
+      return null;
+    }
+
+    // text
+    if (event.message.type === "text") {
+      const msg = event.message.text.trim();
+
+      if (msg === "พูดคุยกับ AI") {
+        await db.query("UPDATE users SET ai_mode=1, ai_last_active=NOW() WHERE id=?", [user.id]);
+        return client.replyMessage(event.replyToken, {
+          type: "text", text: "🤖 เปิด AI แล้ว พูดหรือพิมพ์ได้เลย",
+          quickReply: { items: [{ type: "action", action: { type: "message", label: "❌ ออกจาก AI", text: "ออกจาก AI" } }] }
+        });
+      }
+
+      if (msg === "ออกจาก AI") {
+        await db.query("UPDATE users SET ai_mode=0 WHERE id=?", [user.id]);
+        return client.replyMessage(event.replyToken, { type: "text", text: "ออกจาก AI แล้ว 👋" });
+      }
+
+      if (msg === "สมัครอาสา") {
+        await db.query("UPDATE users SET role='volunteer', status='pending' WHERE line_user_id=?", [userId]);
+        const registerUrl = process.env.BASE_URL.trim() + "/volunteer/register?uid=" + userId;
+        const imageUrl    = process.env.BASE_URL.trim() + "/images/smart.jpg";
+        return client.replyMessage(event.replyToken, {
+          type: "flex", altText: "สมัครเป็นอาสา SmartCompanion",
+          contents: {
+            type: "bubble", size: "mega",
+            hero: { type: "image", url: imageUrl, size: "full", aspectRatio: "1:1", aspectMode: "cover" },
+            body: {
+              type: "box", layout: "vertical",
+              contents: [
+                { type: "text", text: "🤝 สมัครเป็นอาสา", weight: "bold", size: "xl" },
+                { type: "text", text: "ร่วมช่วยเหลือผู้สูงอายุในชุมชนของคุณ", size: "sm", color: "#666666", margin: "md", wrap: true },
+                { type: "text", text: "⏳ กรุณารอ admin อนุมัติก่อน เมนูจะเปลี่ยนอัตโนมัติ", size: "xs", color: "#f39c12", margin: "md", wrap: true }
+              ]
+            },
+            footer: {
+              type: "box", layout: "vertical",
+              contents: [{ type: "button", style: "primary", color: "#0077ff", action: { type: "uri", label: "📝 กรอกฟอร์มสมัครที่นี่", uri: registerUrl } }]
+            }
+          }
+        });
+      }
+
+      if (msg === "ดูประวัติ") {
+        return handleHistory(event, user, client);
+      }
+
+      // AI mode
+      if (user.ai_mode == 1) return handleAIText(event, user, client, msg);
+
+      // routes อื่น
+      const actRes = await activityRoute.handleMessage(event, client, user, msg, userStates);
+      if (actRes) return client.replyMessage(event.replyToken, actRes);
+
+      const helpRes = await helpRoute.handleMessage(event, user);
+      if (helpRes) return client.replyMessage(event.replyToken, helpRes);
+
+      return client.replyMessage(event.replyToken, { type: "text", text: "กรุณาใช้เมนู" });
+    }
+  }
+
+  return null;
+}
+
+/* ================= HISTORY HANDLER ================= */
+async function handleHistory(event, user, client) {
+  const safeText = (text, len = 35) => text ? text.substring(0, len) : "-";
+  const formatDate = (date) => {
+    if (!date) return "-";
+    return new Date(date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
+  const statusColor = (s) =>
+    s === "completed" ? "#27ae60" : s === "waiting" ? "#f39c12" : s === "accepted" ? "#2980b9" : s === "cancelled" ? "#e74c3c" : "#888888";
+
+  if (user.role === "volunteer") {
+    const [helps] = await db.query(
+      "SELECT detail, status, urgency, created_at FROM help_requests WHERE volunteer_id=? ORDER BY created_at DESC LIMIT 5", [user.id]
+    );
+    const [chats] = await db.query(
+      `SELECT m.message, m.sender_id, m.created_at FROM messages m
+       JOIN help_requests h ON m.request_id=h.id WHERE h.volunteer_id=? ORDER BY m.created_at DESC LIMIT 5`, [user.id]
+    );
+
+    const helpBox = helps.length
+      ? helps.map(h => ({ type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
+          { type: "text", text: "🆘 " + (h.detail || "-"), size: "sm", weight: "bold", wrap: true },
+          { type: "text", text: h.urgency === "urgent" ? "🔴 เร่งด่วน" : "🟢 ไม่เร่งด่วน", size: "xs", color: h.urgency === "urgent" ? "#e74c3c" : "#27ae60" },
+          { type: "text", text: h.status, size: "xs", color: statusColor(h.status) },
+          { type: "text", text: formatDate(h.created_at), size: "xs", color: "#888888" }
+        ]}))
+      : [{ type: "text", text: "ไม่มีคำขอช่วยเหลือ", size: "sm", color: "#999999" }];
+
+    const chatBox = chats.length
+      ? chats.map(c => ({ type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
+          { type: "text", text: c.sender_id === user.id ? "🙋‍♂️ อาสา" : "👵 ผู้สูงอายุ", size: "xs", weight: "bold" },
+          { type: "text", text: c.message || "-", size: "sm", wrap: true },
+          { type: "text", text: formatDate(c.created_at), size: "xs", color: "#888888" }
+        ]}))
+      : [{ type: "text", text: "ไม่มีแชท", size: "sm", color: "#999999" }];
+
+    return client.replyMessage(event.replyToken, {
+      type: "flex", altText: "ประวัติของคุณ",
+      contents: { type: "carousel", contents: [
+        { type: "bubble", body: { type: "box", layout: "vertical", spacing: "md", contents: [{ type: "text", text: "🆘 คำขอช่วยเหลือ", weight: "bold", size: "lg" }, { type: "separator" }, ...helpBox] } },
+        { type: "bubble", body: { type: "box", layout: "vertical", spacing: "md", contents: [{ type: "text", text: "💬 แชทล่าสุด", weight: "bold", size: "lg" }, { type: "separator" }, ...chatBox] } }
+      ]}
+    });
+  }
+
+  // elder
+  const [helps] = await db.query(
+    "SELECT detail, status, created_at FROM help_requests WHERE elder_id=? ORDER BY created_at DESC LIMIT 5", [user.id]
+  );
+  const [activities] = await db.query(
+    "SELECT title, status, activity_time FROM activities WHERE created_by=? ORDER BY activity_time DESC LIMIT 5", [user.id]
+  );
+  const [chats] = await db.query(
+    `SELECT m.message, m.sender_id, m.created_at FROM messages m
+     JOIN help_requests h ON m.request_id=h.id WHERE h.elder_id=? ORDER BY m.created_at DESC LIMIT 5`, [user.id]
+  );
+
+  const mkBox = (items, emptyText, fn) =>
+    items.length ? items.map(fn) : [{ type: "text", text: emptyText, size: "md", color: "#999999", align: "center", margin: "lg" }];
+
+  const helpBoxes = mkBox(helps, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
+    { type: "text", text: "🆘 " + safeText(i.detail), size: "md", wrap: true },
+    { type: "text", text: i.status + " • " + formatDate(i.created_at), size: "sm", color: statusColor(i.status) }
+  ]}));
+  const actBoxes = mkBox(activities, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
+    { type: "text", text: "📅 " + safeText(i.title), size: "md", wrap: true },
+    { type: "text", text: i.status + " • " + formatDate(i.activity_time), size: "sm", color: statusColor(i.status) }
+  ]}));
+  const chatBoxes = mkBox(chats, "ไม่มีแชท", c => ({ type: "box", layout: "vertical", margin: "md", contents: [
+    { type: "text", text: (c.sender_id == user.id ? "คุณ: " : "อาสา: ") + safeText(c.message), size: "md", wrap: true },
+    { type: "text", text: formatDate(c.created_at), size: "sm", color: "#888888" }
+  ]}));
+
+  return client.replyMessage(event.replyToken, {
+    type: "flex", altText: "ประวัติย้อนหลัง",
+    contents: { type: "carousel", contents: [
+      { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#2c3e50", paddingAll: "15px", contents: [{ type: "text", text: "🆘 คำขอช่วยเหลือ", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: helpBoxes } },
+      { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#34495e", paddingAll: "15px", contents: [{ type: "text", text: "📅 กิจกรรม", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: actBoxes } },
+      { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#16a085", paddingAll: "15px", contents: [{ type: "text", text: "💬 แชทล่าสุด", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: chatBoxes } }
+    ]}
+  });
+}
+
+/* ================= EXPRESS CONFIG ================= */
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
+app.use("/images", express.static("images"));
+app.use(session({ secret: "smartcompanion", resave: false, saveUninitialized: false, cookie: { secure: false } }));
+
+app.use("/", require("./routes/auth"));
+app.use("/admin", require("./routes/admin"));
+app.use("/volunteer", require("./routes/volunteer"));
+app.use("/elder", require("./routes/elder"));
+app.use("/activity", activityRoute);
+app.use("/forgot-password", forgetRoutes);
+
+app.listen(3000, () => console.log("Server running on port 3000"));

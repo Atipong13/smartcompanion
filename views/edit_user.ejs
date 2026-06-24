@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>แก้ไขผู้ใช้</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+box-sizing:border-box;
+font-family:'Prompt',sans-serif;
+}
+
+body{
+margin:0;
+background:#f4f6f9;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+/* Card */
+
+.card{
+background:#fff;
+padding:35px;
+border-radius:14px;
+width:420px;
+box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+/* Header */
+
+.header{
+margin-bottom:20px;
+}
+
+.header h2{
+margin:0;
+font-size:22px;
+color:#111827;
+}
+
+.header p{
+margin:4px 0 0;
+font-size:13px;
+color:#6b7280;
+}
+
+/* Form */
+
+.form-group{
+margin-bottom:16px;
+}
+
+label{
+display:block;
+font-size:14px;
+margin-bottom:6px;
+font-weight:500;
+}
+
+input,select{
+width:100%;
+padding:10px 12px;
+border:1px solid #e5e7eb;
+border-radius:8px;
+font-size:14px;
+outline:none;
+transition:0.2s;
+}
+
+input:focus,select:focus{
+border-color:#3b82f6;
+box-shadow:0 0 0 2px rgba(59,130,246,.15);
+}
+
+/* Buttons */
+
+.btn-group{
+display:flex;
+gap:10px;
+margin-top:20px;
+}
+
+.btn{
+flex:1;
+padding:10px;
+border:none;
+border-radius:8px;
+font-size:14px;
+cursor:pointer;
+transition:.2s;
+}
+
+.save{
+background:#3b82f6;
+color:#fff;
+}
+
+.save:hover{
+background:#2563eb;
+}
+
+.back{
+background:#6b7280;
+color:#fff;
+}
+
+.back:hover{
+background:#4b5563;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<div class="header">
+<h2>✏️ แก้ไขข้อมูลผู้ใช้</h2>
+<p>แก้ไขข้อมูลของผู้สูงอายุหรืออาสาในระบบ</p>
+</div>
+
+<form method="POST">
+
+<div class="form-group">
+<label>ชื่อผู้ใช้</label>
+<input type="text" name="name" value="<%= user.name %>" required>
+</div>
+
+<div class="form-group">
+<label>ประเภทผู้ใช้</label>
+<select name="role">
+<option value="elder" <%= user.role=="elder"?"selected":"" %>>ผู้สูงอายุ</option>
+<option value="volunteer" <%= user.role=="volunteer"?"selected":"" %>>อาสา</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>สถานะการใช้งาน</label>
+<select name="status">
+<option value="approved" <%= user.status=="approved"?"selected":"" %>>อนุมัติ</option>
+<option value="pending" <%= user.status=="pending"?"selected":"" %>>รออนุมัติ</option>
+<option value="rejected" <%= user.status=="rejected"?"selected":"" %>>ปฏิเสธ</option>
+</select>
+</div>
+
+<div class="btn-group">
+
+<button type="submit" class="btn save">
+💾 บันทึก
+</button>
+
+<a href="/admin/users" style="flex:1;">
+<button type="button" class="btn back">
+⬅ กลับ
+</button>
+</a>
+
+</div>
+
+</form>
+
+</div>
+
+</body>
+</html>

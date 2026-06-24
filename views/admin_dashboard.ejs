@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SmartCompanion | Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Prompt',sans-serif;
+}
+
+body{
+  background:#0f172a;
+  color:#fff;
+  display:flex;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:260px;
+  background:rgba(15,23,42,.95);
+  border-right:1px solid rgba(255,255,255,.05);
+  backdrop-filter:blur(18px);
+  padding:30px 20px;
+}
+
+.logo{
+  font-size:24px;
+  font-weight:600;
+  margin-bottom:40px;
+}
+
+.sidebar a{
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  color:#cbd5e1;
+  text-decoration:none;
+
+  padding:14px 16px;
+  border-radius:16px;
+
+  margin-bottom:10px;
+
+  transition:.25s;
+}
+
+.sidebar a:hover{
+  background:#2563eb;
+  color:#fff;
+  transform:translateX(4px);
+}
+
+/* MAIN */
+
+.main{
+  flex:1;
+  padding:30px;
+}
+
+/* TOPBAR */
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:30px;
+}
+
+.topbar h1{
+  font-size:30px;
+}
+
+.admin-box{
+  background:rgba(255,255,255,.05);
+  padding:12px 18px;
+  border-radius:16px;
+  color:#cbd5e1;
+}
+
+/* SEARCH */
+
+.search-box{
+  margin-bottom:25px;
+}
+
+.search-box input{
+  width:100%;
+  padding:14px 18px;
+
+  border:none;
+  border-radius:18px;
+
+  background:rgba(255,255,255,.06);
+
+  color:#fff;
+  outline:none;
+
+  font-size:14px;
+}
+
+.search-box input::placeholder{
+  color:#94a3b8;
+}
+
+/* KPI */
+
+.kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+  margin-bottom:30px;
+}
+
+.kpi-card{
+  background:linear-gradient(
+    135deg,
+    rgba(37,99,235,.95),
+    rgba(59,130,246,.7)
+  );
+
+  border-radius:24px;
+  padding:25px;
+
+  position:relative;
+  overflow:hidden;
+
+  box-shadow:
+    0 15px 40px rgba(37,99,235,.25);
+
+  transition:.25s;
+}
+
+.kpi-card:hover{
+  transform:translateY(-5px);
+}
+
+.kpi-card::before{
+  content:'';
+
+  position:absolute;
+
+  width:150px;
+  height:150px;
+
+  background:rgba(255,255,255,.08);
+
+  border-radius:50%;
+
+  top:-40px;
+  right:-40px;
+}
+
+.kpi-title{
+  color:#dbeafe;
+  font-size:14px;
+}
+
+.kpi-value{
+  font-size:40px;
+  margin-top:10px;
+  font-weight:600;
+}
+
+/* GRID */
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:24px;
+}
+
+/* CARD */
+
+.card{
+  background:rgba(255,255,255,.05);
+
+  border:1px solid rgba(255,255,255,.06);
+
+  backdrop-filter:blur(18px);
+
+  border-radius:24px;
+
+  padding:25px;
+
+  transition:.25s;
+
+  position:relative;
+  overflow:hidden;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+  box-shadow:0 20px 40px rgba(0,0,0,.25);
+}
+
+.card::before{
+  content:'';
+
+  position:absolute;
+
+  width:180px;
+  height:180px;
+
+  background:rgba(255,255,255,.03);
+
+  border-radius:50%;
+
+  top:-70px;
+  right:-70px;
+}
+
+/* CARD TOP */
+
+.card-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.user{
+  font-size:22px;
+  font-weight:600;
+}
+
+/* DETAILS */
+
+.details{
+  line-height:2;
+  color:#cbd5e1;
+  font-size:14px;
+}
+
+.label{
+  color:#94a3b8;
+}
+
+/* STATUS */
+
+.badge{
+  display:inline-block;
+  padding:8px 16px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.waiting{
+  background:#f59e0b33;
+  color:#fbbf24;
+}
+
+.working{
+  background:#2563eb33;
+  color:#60a5fa;
+}
+
+.done{
+  background:#16a34a33;
+  color:#4ade80;
+}
+
+/* EMPTY */
+
+.empty{
+  text-align:center;
+  margin-top:100px;
+  color:#94a3b8;
+  font-size:18px;
+}
+
+/* MOBILE */
+
+@media(max-width:1000px){
+
+  .sidebar{
+    display:none;
+  }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+
+<div class="sidebar">
+
+  <div class="logo">
+    🛠 SmartCompanion
+  </div>
+
+  <a href="/admin">📋 Dashboard</a>
+  <a href="/admin/working">🟢 เคสกำลังทำ</a>
+  <a href="/admin/volunteers">👥 อนุมัติอาสา</a>
+  <a href="/admin/users">👤 จัดการผู้ใช้</a>
+  <a href="/admin/reports">📊 รายงาน</a>
+  <a href="/logout">🚪 ออกจากระบบ</a>
+
+</div>
+
+<!-- MAIN -->
+
+<div class="main">
+
+  <!-- TOPBAR -->
+
+  <div class="topbar">
+
+    <h1>
+      🚀 Smart Dashboard
+    </h1>
+
+    <div class="admin-box">
+      ADMIN PANEL
+    </div>
+
+  </div>
+
+  <!-- SEARCH -->
+
+  <div class="search-box">
+
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="ค้นหาเคส..."
+    >
+
+  </div>
+
+  <!-- KPI -->
+
+  <div class="kpi-grid">
+
+    <div class="kpi-card">
+
+      <div class="kpi-title">
+        เคสทั้งหมด
+      </div>
+
+      <div class="kpi-value">
+        <%= data.length %>
+      </div>
+
+    </div>
+
+    <div class="kpi-card">
+
+      <div class="kpi-title">
+        กำลังดำเนินการ
+      </div>
+
+      <div class="kpi-value">
+
+        <%= data.filter(
+          d=>d.status==='accepted'
+        ).length %>
+
+      </div>
+
+    </div>
+
+    <div class="kpi-card">
+
+      <div class="kpi-title">
+        เสร็จสิ้น
+      </div>
+
+      <div class="kpi-value">
+
+        <%= data.filter(
+          d=>d.status==='done'
+        ).length %>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- EMPTY -->
+
+  <% if(data.length === 0){ %>
+
+    <div class="empty">
+      ยังไม่มีเคสในระบบ
+    </div>
+
+  <% } %>
+
+  <!-- CARDS -->
+
+  <div class="cards-grid" id="cardsGrid">
+
+    <% data.forEach(row=>{ %>
+
+      <%
+
+        let statusClass='waiting';
+        let statusText='รอรับเคส';
+
+        if(row.status==='accepted'){
+
+          statusClass='working';
+          statusText='กำลังดำเนินการ';
+
+        }
+
+        if(row.status==='done'){
+
+          statusClass='done';
+          statusText='เสร็จสิ้น';
+
+        }
+
+      %>
+
+      <div
+        class="card case-card"
+data-detail="<%= (row.detail || '').toLowerCase() %>"      >
+
+        <!-- TOP -->
+
+        <div class="card-top">
+
+          <div class="user">
+            👵 <%= row.elder_name %>
+          </div>
+
+          <span class="badge <%= statusClass %>">
+            <%= statusText %>
+          </span>
+
+        </div>
+
+        <!-- DETAILS -->
+
+        <div class="details">
+
+          <span class="label">
+            📝 รายละเอียด:
+          </span>
+
+          <br>
+
+          <%= row.detail %>
+
+          <br><br>
+
+          <span class="label">
+            🙋 อาสา:
+          </span>
+
+          <br>
+
+          <strong>
+            <%= row.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
+          </strong>
+
+        </div>
+
+      </div>
+
+    <% }) %>
+
+  </div>
+
+</div>
+
+<script>
+
+/* SEARCH */
+
+const searchInput =
+document.getElementById('searchInput');
+
+const cards =
+document.querySelectorAll('.case-card');
+
+searchInput.addEventListener('keyup',()=>{
+
+  const keyword =
+  searchInput.value.toLowerCase();
+
+  cards.forEach(card=>{
+
+    const detail =
+    card.dataset.detail;
+
+    if(detail.includes(keyword)){
+
+      card.style.display='block';
+
+    }else{
+
+      card.style.display='none';
+
+    }
+
+  });
+
+});
+
+</script>
+
+</body>
+</html>
