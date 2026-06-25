@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../config/db");
 const line = require("@line/bot-sdk");
 const ExcelJS = require("exceljs");
-
+const PDFDocument = require("pdfkit");
 /* =========================
    LINE CLIENT
 ========================= */
@@ -397,6 +397,72 @@ router.get("/export/excel", isAdmin, async (req, res) => {
   res.end();
 });
 
+/* =========================
+   EXPORT PDF
+   /admin/export/pdf
+========================= */
+router.get("/export/pdf", isAdmin, async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT h.id, e.name AS elder_name,
+             v.name AS volunteer_name,
+             h.detail, h.status, h.created_at
+      FROM help_requests h
+      LEFT JOIN users e ON h.elder_id = e.id
+      LEFT JOIN users v ON h.volunteer_id = v.id
+      ORDER BY h.id DESC
+    `);
+
+    const doc = new PDFDocument({ margin: 30, size: "A4" });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=SmartCompanion_Report.pdf"
+    );
+
+    doc.pipe(res);
+
+    /* ===== TITLE ===== */
+    doc.fontSize(18).text("SmartCompanion Report", { align: "center" });
+    doc.moveDown();
+
+    doc.fontSize(10).text(`Total records: ${rows.length}`);
+    doc.moveDown();
+
+    /* ===== TABLE HEADER ===== */
+    doc.fontSize(10).text(
+      "ID | Elder | Volunteer | Detail | Status | Date"
+    );
+
+    doc.moveTo(30, doc.y).lineTo(580, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    /* ===== ROWS ===== */
+    rows.forEach((r, i) => {
+      const line =
+        `${r.id} | ` +
+        `${r.elder_name || "-"} | ` +
+        `${r.volunteer_name || "-"} | ` +
+        `${(r.detail || "").substring(0, 20)} | ` +
+        `${r.status} | ` +
+        `${new Date(r.created_at).toLocaleDateString("th-TH")}`;
+
+      doc.fontSize(9).text(line);
+      doc.moveDown(0.3);
+
+      // กัน PDF ล้นหน้า
+      if (i % 35 === 0 && i !== 0) {
+        doc.addPage();
+      }
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("PDF export error");
+  }
+});
 /* =========================
    LOGOUT
 ========================= */

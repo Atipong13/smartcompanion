@@ -319,17 +319,82 @@ if (data === "cancel_all") {
 }
 
 /* ================= FLEX FUNCTIONS ================= */
-
 function selectTypeMessage() {
   return {
-    type: "text",
-    text: "เลือกประเภทกิจกรรม",
-    quickReply: {
-      items: [
-        { type: "action", action: { type: "message", label: "🏃 ออกกำลังกาย", text: "ออกกำลังกาย" }},
-        { type: "action", action: { type: "message", label: "💊 กินยา", text: "กินยา" }},
-        { type: "action", action: { type: "message", label: "📝 อื่นๆ", text: "อื่นๆ" }}
-      ]
+    type: "flex",
+    altText: "เลือกประเภทกิจกรรม",
+    contents: {
+      type: "bubble",
+      size: "giga",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "lg",
+        contents: [
+          {
+            type: "text",
+            text: "เลือกประเภทกิจกรรม",
+            weight: "bold",
+            size: "xl",
+            align: "center",
+            color: "#1E88E5"
+          },
+          {
+            type: "text",
+            text: "กรุณาเลือกประเภทที่ต้องการ",
+            size: "md",
+            align: "center",
+            color: "#666666",
+            wrap: true
+          },
+
+          {
+            type: "separator",
+            margin: "lg"
+          },
+
+          // ปุ่ม 1
+          {
+            type: "button",
+            style: "primary",
+            color: "#4CAF50",
+            height: "sm",
+            action: {
+              type: "message",
+              label: "🏃 ออกกำลังกาย",
+              text: "ออกกำลังกาย"
+            }
+          },
+
+          // ปุ่ม 2
+          {
+            type: "button",
+            style: "primary",
+            color: "#FF9800",
+            height: "sm",
+            margin: "md",
+            action: {
+              type: "message",
+              label: "💊 กินยา",
+              text: "กินยา"
+            }
+          },
+
+          // ปุ่ม 3
+          {
+            type: "button",
+            style: "primary",
+            color: "#2196F3",
+            height: "sm",
+            margin: "md",
+            action: {
+              type: "message",
+              label: "📝 อื่นๆ",
+              text: "อื่นๆ"
+            }
+          }
+        ]
+      }
     }
   };
 }
