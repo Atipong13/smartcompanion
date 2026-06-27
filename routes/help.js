@@ -370,83 +370,126 @@ const handleAudio = async (event, user) => {
       const data = event.postback.data;
 
       console.log("POSTBACK:", data); // debug
+if (data.startsWith("accept_")) {
+  const caseId = data.split("_")[1];
 
-      /* ================= อาสารับเคส ================= */
-      if (data.startsWith("accept_")) {
+  if (!caseId) {
+    return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
+  }
 
-        const caseId = data.split("_")[1];
+  // เช็คว่ามีเคสค้างอยู่ไหม
+  const [activeCase] = await db.query(`
+    SELECT id FROM help_requests
+    WHERE volunteer_id=?
+    AND status IN ('waiting', 'accepted')
+    LIMIT 1
+  `, [user.id]);
 
-        if (!caseId) {
-          return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
-        }
+  if (activeCase.length > 0) {
+    return { type: "text", text: "❌ คุณยังมีเคสที่ยังไม่จบ กรุณาจบเคสเดิมก่อน" };
+  }
 
-        // อัปเดตสถานะ
-        await db.query(
-          "UPDATE help_requests SET status='accepted', volunteer_id=? WHERE id=?",
-          [user.id, caseId]
-        );
+  // เช็คว่าเคสนี้ยังไม่มีคนรับ
+  const [result] = await db.query(`
+    UPDATE help_requests
+    SET status='accepted', volunteer_id=?
+    WHERE id=? AND status='waiting' AND volunteer_id IS NULL
+  `, [user.id, caseId]);
 
-        const [caseData] = await db.query(
-          "SELECT elder_id FROM help_requests WHERE id=?",
-          [caseId]
-        );
+  if (result.affectedRows === 0) {
+    return { type: "text", text: "❌ เคสนี้มีคนรับแล้ว" };
+  }
 
-        if (!caseData.length) {
-          return { type: "text", text: "❌ ไม่พบข้อมูลเคส" };
-        }
+  // ✅ ดึงข้อมูลเคส + ผู้สูงอายุ + อาสา พร้อมกัน
+  const [caseData] = await db.query(`
+    SELECT hr.detail,
+           elder.name AS elder_name,
+           elder.line_user_id AS elder_line_id,
+           vol.name AS vol_name,
+           vol.phone AS vol_phone
+    FROM help_requests hr
+    JOIN users elder ON hr.elder_id = elder.id
+    JOIN users vol ON vol.id = ?
+    WHERE hr.id=?
+  `, [user.id, caseId]);
 
-        const [elder] = await db.query(
-          "SELECT line_user_id FROM users WHERE id=?",
-          [caseData[0].elder_id]
-        );
+  if (!caseData.length) {
+    return { type: "text", text: "❌ ไม่พบข้อมูลเคส" };
+  }
 
-        // แจ้งผู้สูงอายุ
-        if (elder.length) {
-          await safePush(elder[0].line_user_id, {
-            type: "text",
-            text: "✅ มีอาสารับเคสแล้ว สามารถพูดคุยกันได้ทันที 🙏"
-          });
-        }
+  const c = caseData[0];
 
-        // ปุ่มฝั่งอาสา
-        return {
-          type: "flex",
-          altText: "จัดการเคส",
-          contents: {
-            type: "bubble",
-            body: {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                { type: "text", text: "คุณรับเคสนี้แล้ว", weight: "bold" }
-              ]
-            },
-            footer: {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                {
-                  type: "button",
-                  style: "primary",
-                  action: {
-                    type: "postback",
-                    label: "📍 ขอโลเคชั่น",
-                    data: `request_location_${caseId}`
-                  }
-                },
-                {
-                  type: "button",
-                  action: {
-                    type: "postback",
-                    label: "🏁 จบเคส",
-                    data: `complete_${caseId}`
-                  }
-                }
-              ]
+  // แจ้งผู้สูงอายุ
+  if (c.elder_line_id) {
+    await safePush(c.elder_line_id, {
+      type: "flex",
+      altText: "มีอาสารับเคสของคุณแล้ว",
+      contents: {
+        type: "bubble",
+        body: {
+          type: "box",
+          layout: "vertical",
+          spacing: "md",
+          contents: [
+            { type: "text", text: "✅ มีอาสารับเคสของคุณแล้ว", weight: "bold", size: "lg", color: "#27ae60" },
+            { type: "separator" },
+            { type: "text", text: "👤 อาสา: " + (c.vol_name || "-"), size: "md" },
+            { type: "text", text: "📞 โทร: " + (c.vol_phone || "-"), size: "md" },
+            { type: "text", text: "💬 สามารถกดปุ่มด้านล่างเพื่อพูดคุยกับอาสาได้ทันที", size: "xs", color: "#888888", wrap: true, margin: "md" }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              color: "#06C755",
+              action: { type: "message", label: "💬 พูดคุยกับอาสา", text: "พูดคุยกับอาสา" }
             }
-          }
-        };
+          ]
+        }
       }
+    });
+  }
+
+  // การ์ดให้อาสา
+  return {
+    type: "flex",
+    altText: "คุณรับเคสนี้แล้ว",
+    contents: {
+      type: "bubble",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        contents: [
+          { type: "text", text: "✅ คุณรับเคสนี้แล้ว", weight: "bold", size: "lg", color: "#27ae60" },
+          { type: "separator" },
+          { type: "text", text: "👤 ผู้สูงอายุ: " + (c.elder_name || "-"), size: "md" },
+          { type: "text", text: "📝 เรื่อง: " + (c.detail || "-"), size: "sm", color: "#666666", wrap: true }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            action: { type: "postback", label: "📍 ขอโลเคชั่น", data: `request_location_${caseId}` }
+          },
+          {
+            type: "button",
+            action: { type: "postback", label: "🏁 จบเคส", data: `complete_${caseId}` }
+          }
+        ]
+      }
+    }
+  };
+}
 /* ================= ขอโลเคชั่น ================= */
 if (data.startsWith("request_location_")) {
 
@@ -513,41 +556,54 @@ if (data.startsWith("request_location_")) {
   };
 }
       /* ================= จบเคส ================= */
-      if (data.startsWith("complete_")) {
+     if (data.startsWith("complete_")) {
+  const caseId = data.split("_")[1];
 
-        const caseId = data.split("_")[1];
+  if (!caseId) {
+    return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
+  }
 
-        if (!caseId) {
-          return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
-        }
+  // ✅ เช็คว่าเคสนี้ยังเปิดอยู่ไหม
+  const [check] = await db.query(
+    "SELECT id, status FROM help_requests WHERE id=?",
+    [caseId]
+  );
 
-        await db.query(
-          "UPDATE help_requests SET status='completed', completed_at=NOW() WHERE id=?",
-          [caseId]
-        );
+  if (!check.length) {
+    return { type: "text", text: "❌ ไม่พบเคสนี้" };
+  }
 
-        const [caseData] = await db.query(
-          "SELECT elder_id FROM help_requests WHERE id=?",
-          [caseId]
-        );
+  if (check[0].status === "completed") {
+    return { type: "text", text: "⚠️ เคสนี้ถูกจบไปแล้ว" };
+  }
 
-        if (caseData.length) {
+  // ✅ จบเคส
+  await db.query(
+    "UPDATE help_requests SET status='completed', completed_at=NOW() WHERE id=?",
+    [caseId]
+  );
 
-          const [elder] = await db.query(
-            "SELECT line_user_id FROM users WHERE id=?",
-            [caseData[0].elder_id]
-          );
+  const [caseData] = await db.query(
+    "SELECT elder_id FROM help_requests WHERE id=?",
+    [caseId]
+  );
 
-          if (elder.length) {
-            await safePush(elder[0].line_user_id, {
-              type: "text",
-              text: "🎉 เคสเสร็จเรียบร้อย ขอบคุณที่ใช้บริการ 🙏"
-            });
-          }
-        }
+  if (caseData.length) {
+    const [elder] = await db.query(
+      "SELECT line_user_id FROM users WHERE id=?",
+      [caseData[0].elder_id]
+    );
 
-        return { type: "text", text: "ปิดเคสเรียบร้อยแล้ว" };
-      }
+    if (elder.length) {
+      await safePush(elder[0].line_user_id, {
+        type: "text",
+        text: "🎉 เคสเสร็จเรียบร้อย ขอบคุณที่ใช้บริการ 🙏"
+      });
+    }
+  }
+
+  return { type: "text", text: "✅ ปิดเคสเรียบร้อยแล้ว" };
+}
       /* ================= เลือกประเภทกิจกรรม ================= */
       if (data.startsWith("act_")) {
 
