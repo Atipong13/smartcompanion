@@ -68,29 +68,50 @@ cron.schedule("* * * * *", async () => {
     const now = new Date();
 
     // แจ้งเตือนกิจกรรม
-    const [rows] = await db.query(`
-      SELECT a.*, u.line_user_id FROM activities a
-      JOIN users u ON a.created_by=u.id
-      WHERE a.status='pending' AND a.activity_time <= ?
-      AND (a.last_notified_at IS NULL OR TIMESTAMPDIFF(MINUTE, a.last_notified_at, NOW()) >= 2)
-    `, [now]);
+// แจ้งเตือนกิจกรรม
+const [rows] = await db.query(`
+  SELECT a.*, u.line_user_id FROM activities a
+  JOIN users u ON a.created_by=u.id
+  WHERE a.status='pending' AND a.activity_time <= ?
+  AND (a.last_notified_at IS NULL OR TIMESTAMPDIFF(MINUTE, a.last_notified_at, NOW()) >= 2)
+`, [now]);
 
-    for (const act of rows) {
-      try {
-        await safePush(act.line_user_id, {
-          type: "template", altText: "แจ้งเตือนกิจกรรม",
-          template: {
-            type: "buttons", title: "⏰ แจ้งเตือนกิจกรรม",
-            text: act.title.substring(0, 60),
-            actions: [{ type: "postback", label: "รับทราบ", data: "ack_" + act.id }]
-          }
-        });
-        await db.query("UPDATE activities SET last_notified_at=NOW() WHERE id=?", [act.id]);
-        await new Promise(r => setTimeout(r, 800));
-      } catch (err) {
-        console.log("❌ Push Error:", err.response?.data || err.message);
-      }
+for (const act of rows) {
+  try {
+    // ตรวจสอบข้อมูลก่อน push
+    if (!act.line_user_id) {
+      console.log("⚠️ ไม่มี line_user_id, ข้าม activity id:", act.id);
+      continue;
     }
+    if (!act.title) {
+      console.log("⚠️ ไม่มี title, ข้าม activity id:", act.id);
+      continue;
+    }
+
+    const title = act.title.substring(0, 40);  // LINE limit 40 ตัว
+    const text  = act.title.substring(0, 60);  // LINE limit 60 ตัว
+
+    console.log("📤 Push to:", act.line_user_id, "| activity:", act.id, "|", title);
+
+    await safePush(act.line_user_id, {
+      type: "template",
+      altText: "แจ้งเตือนกิจกรรม: " + title,
+      template: {
+        type: "buttons",
+        title: "⏰ " + title,
+        text: text,
+        actions: [{ type: "postback", label: "รับทราบ", data: "ack_" + act.id }]
+      }
+    });
+
+    await db.query("UPDATE activities SET last_notified_at=NOW() WHERE id=?", [act.id]);
+    await new Promise(r => setTimeout(r, 800));
+
+  } catch (err) {
+    console.log("❌ Push Error activity id:", act.id);
+    console.log("❌ Detail:", JSON.stringify(err.response?.data, null, 2) || err.message);
+  }
+}
 
     // ออก AI mode อัตโนมัติ (ไม่โต้ตอบ 2 นาที)
     const [expired] = await db.query(`
@@ -126,21 +147,30 @@ async function handleEvent(event) {
 
   const userId = event.source.userId;
 
-  // ดึง/สร้าง user
-  let name = "User";
-  try { name = (await client.getProfile(userId)).displayName; } catch (e) {}
+  // ดึงชื่อจาก LINE (ถ้าไม่ได้ → null ไม่ใช้ค่า default)
+  let name = null;
+  try {
+    name = (await client.getProfile(userId)).displayName;
+  } catch (e) {
+    console.error("getProfile failed:", userId, e?.message);
+  }
 
+  // ดึง/สร้าง user
   const [users] = await db.query("SELECT * FROM users WHERE line_user_id=?", [userId]);
   let user;
 
   if (!users.length) {
+    // user ใหม่ → ถ้าไม่รู้ชื่อ ใช้ userId แทนชั่วคราว
     const [result] = await db.query(
       "INSERT INTO users (line_user_id, name, role, status) VALUES (?, ?, 'elder', 'approved')",
-      [userId, name]
+      [userId, name ?? userId]
     );
     user = { id: result.insertId, line_user_id: userId, role: "elder", status: "approved" };
   } else {
-    await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
+    // user เก่า → อัปเดตชื่อเฉพาะเมื่อดึงชื่อได้สำเร็จ
+    if (name) {
+      await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
+    }
     user = users[0];
   }
 

@@ -262,62 +262,120 @@ router.get("/working", isAdmin, async (req, res) => {
 /* =========================
    REPORTS
    /admin/reports
-========================= */router.get("/reports", isAdmin, async (req, res) => {
+========================= */
+router.get("/reports", isAdmin, async (req, res) => {
 
   try {
 
-    const [[total]] = await db.query(
-      "SELECT COUNT(*) as total FROM help_requests"
-    );
+    // ===== Filter =====
+    const filter = req.query.filter || "all";
 
-    const [[working]] = await db.query(
-      "SELECT COUNT(*) as total FROM help_requests WHERE status='accepted'"
-    );
+    let where = "";
 
-    const [[done]] = await db.query(
-      "SELECT COUNT(*) as total FROM help_requests WHERE status='completed'"
-    );
+    if (filter === "day") {
+      where = "WHERE DATE(created_at)=CURDATE()";
+    } else if (filter === "month") {
+      where = `
+      WHERE MONTH(created_at)=MONTH(CURDATE())
+      AND YEAR(created_at)=YEAR(CURDATE())
+      `;
+    } else if (filter === "year") {
+      where = `
+      WHERE YEAR(created_at)=YEAR(CURDATE())
+      `;
+    }
 
-    const [[users]] = await db.query(
-      "SELECT COUNT(*) as total FROM users"
-    );
+    // ===== KPI =====
 
-    const [[vol]] = await db.query(
-      "SELECT COUNT(*) as total FROM users WHERE role='volunteer'"
-    );
+    const [[total]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM help_requests
+      ${where}
+    `);
 
-    const [[elder]] = await db.query(
-      "SELECT COUNT(*) as total FROM users WHERE role='elder'"
-    );
+    const [[working]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM help_requests
+      ${where}
+      ${where ? "AND" : "WHERE"} status='accepted'
+    `);
+
+    const [[done]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM help_requests
+      ${where}
+      ${where ? "AND" : "WHERE"} status='completed'
+    `);
+
+    const [[users]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM users
+    `);
+
+    const [[vol]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM users
+      WHERE role='volunteer'
+    `);
+
+    const [[elder]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM users
+      WHERE role='elder'
+    `);
+
+    // ===== AI High Risk =====
+
+    const [[highRisk]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM cases
+      WHERE risk='high'
+    `);
+
+    // ===== History =====
 
     const [history] = await db.query(`
-      SELECT h.*, 
-e.name as elderly_name,
-             v.name as volunteer_name
+      SELECT
+        h.*,
+        e.name AS elderly_name,
+        v.name AS volunteer_name
       FROM help_requests h
-      LEFT JOIN users e ON h.elder_id = e.id
-      LEFT JOIN users v ON h.volunteer_id = v.id
+      LEFT JOIN users e
+      ON h.elder_id=e.id
+      LEFT JOIN users v
+      ON h.volunteer_id=v.id
+      ${where.replace(/created_at/g, "h.created_at")}
       ORDER BY h.id DESC
       LIMIT 10
     `);
 
     res.render("reports", {
+
       totalCases: total.total,
       workingCases: working.total,
       doneCases: done.total,
+
       totalUsers: users.total,
       totalVolunteers: vol.total,
       totalElders: elder.total,
-      history
+
+      highRiskCases: highRisk.total,
+
+      history,
+
+      filter
+
     });
 
   } catch (err) {
+
     console.log(err);
+
     res.send("DB ERROR");
+
   }
 
 });
-
 
 
 /* =========================
