@@ -37,11 +37,20 @@ const generateVoice = (text, filename) => {
           .save(m4aPath);
       });
 
-      //  วัด duration
-      const durationSec = await getAudioDurationInSeconds(m4aPath);
-      const durationMs = Math.ceil(durationSec * 1000);
+      //  วัด duration จริง
+const durationSec = await getAudioDurationInSeconds(m4aPath);
+const durationMs = Math.ceil(durationSec * 1000);
 
-      resolve({ url: `/audio/${baseName}.m4a`, duration: durationMs });
+console.log("✅ สร้างเสียงสำเร็จ:", baseName, "| duration:", durationMs, "ms"); // ✅ เพิ่มตรงนี้
+
+setTimeout(() => {
+  fs.unlink(m4aPath, (err) => {
+    if (err) console.error("❌ ลบไม่ได้:", err.message);
+    else console.log("🗑 ลบไฟล์แล้ว:", baseName);
+  });
+}, 10000);
+
+resolve({ url: `/audio/${baseName}.m4a`, duration: durationMs });
 
     } catch (err) {
       console.error("❌ GENERATE VOICE ERROR:", err);

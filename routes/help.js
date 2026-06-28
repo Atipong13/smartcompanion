@@ -229,8 +229,8 @@ if (elder.length) {
 
   try {
     //  ไฟล์เป็น .m4a และรับ duration จริง
-    const fileName = `voice_${Date.now()}.m4a`;
-    const voice = await generateVoice(text, fileName);
+const fileName = `voice_${Date.now()}`; 
+const voice = await generateVoice(text, fileName);
 
     const audioUrl = `${process.env.BASE_URL}${voice.url}`;
 
@@ -288,7 +288,7 @@ const handleAudio = async (event, user) => {
     }
 
     //  บันทึกไฟล์ลง disk
-    const fileName = `audio_${Date.now()}.m4a`;
+    const fileName = `audio_${Date.now()}`;
     const audioDir = path.join(process.cwd(), "public/audio");
 
     if (!fs.existsSync(audioDir)) {
@@ -465,7 +465,6 @@ if (data.startsWith("accept_")) {
           { type: "text", text: "✅ คุณรับเคสนี้แล้ว", weight: "bold", size: "lg", color: "#27ae60" },
           { type: "separator" },
           { type: "text", text: "👤 ผู้สูงอายุ: " + (c.elder_name || "-"), size: "md" },
-          { type: "text", text: "📝 เรื่อง: " + (c.detail || "-"), size: "sm", color: "#666666", wrap: true }
         ]
       },
       footer: {

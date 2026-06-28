@@ -34,6 +34,24 @@ app.use("/audio", express.static(audioDir, {
   }
 }));
 
+// ✅ ลบไฟล์เสียงที่เก่ากว่า 1 ชั่วโมง อัตโนมัติ
+cron.schedule("0 * * * *", () => {
+  try {
+    const files = fs.readdirSync(audioDir);
+    const now = Date.now();
+    files.forEach(file => {
+      const filePath = path.join(audioDir, file);
+      const stat = fs.statSync(filePath);
+      if (now - stat.mtimeMs > 60 * 60 * 1000) {
+        fs.unlinkSync(filePath);
+        console.log("🗑 ลบไฟล์เสียงเก่า:", file);
+      }
+    });
+  } catch (err) {
+    console.error("❌ ลบไฟล์เสียงไม่สำเร็จ:", err.message);
+  }
+});
+
 /* ================= LINE CONFIG ================= */
 const config = {
   channelSecret:      process.env.LINE_CHANNEL_SECRET,
