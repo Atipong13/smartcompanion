@@ -61,13 +61,18 @@ const notifyVolunteers = async (msg, aiReply, userId) => {
 };
 
 // ตอบกลับพร้อมเสียง
+// ✅ แก้แล้ว
 const replyWithVoice = async (client, event, aiReply, hasNotified) => {
-  const filename = `ai_${Date.now()}.mp3`;
-  const audioPath = await generateVoice(aiReply.reply, filename);
-  const audioUrl = `${process.env.BASE_URL}${audioPath}`;
+  const filename = `ai_${Date.now()}`;              // ✅ ไม่ต้องใส่ .mp3 แล้ว
+  const voice = await generateVoice(aiReply.reply, filename); // ✅ รับเป็น object
+  const audioUrl = `${process.env.BASE_URL}${voice.url}`;     // ✅ เอาแค่ .url
 
   return client.replyMessage(event.replyToken, [
-    { type: "audio", originalContentUrl: audioUrl, duration: 15000 },
+    { 
+      type: "audio", 
+      originalContentUrl: audioUrl, 
+      duration: voice.duration   // ✅ duration จริง ไม่ใช่ 15000
+    },
     {
       type: "text",
       text: aiReply.reply,

@@ -103,44 +103,79 @@ body{
   background:rgba(255,255,255,0.06);
   border-radius:18px;
 }
-
 /* GRID */
 .case-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-  gap:18px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:16px;
 }
 
 /* CARD */
 .case-card{
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.1);
-  border-radius:20px;
-  padding:20px;
-  transition:.2s;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:14px;
+
+    display:flex;
+    flex-direction:column;
+
+    min-height:170px;
+    transition:.25s;
 }
 
 .case-card:hover{
-  transform:translateY(-4px);
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,229,255,.15);
 }
 
-/* TOP */
-.card-top{
-  display:flex;
-  justify-content:space-between;
-  margin-bottom:10px;
-}
-
+/* NAME */
 .case-name{
-  font-size:18px;
-  font-weight:600;
+    font-size:18px;
+    font-weight:600;
+    margin-bottom:4px;
 }
 
+/* ID */
 .case-id{
-  font-size:12px;
-  opacity:.7;
+    font-size:12px;
+    color:#8ea5b3;
+    margin-bottom:10px;
 }
 
+/* DETAIL */
+.detail-box{
+    background:rgba(255,255,255,.05);
+    border-radius:10px;
+    padding:10px;
+    font-size:14px;
+    line-height:1.5;
+
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+
+    margin-bottom:12px;
+}
+
+/* BUTTON */
+.accept-btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(135deg,#00e5ff,#00c853);
+    color:#003344;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.accept-btn:hover{
+    transform:scale(1.02);
+}
 /* BADGE */
 .badge{
   padding:6px 10px;
@@ -230,34 +265,32 @@ body{
   <% } %>
 
   <!-- GRID -->
-  <div class="case-grid">
+ <!-- GRID -->
+<div class="case-grid">
 
-  <% list.forEach(row => { %>
+<% list.forEach(row => { %>
 
-    <div class="case-card">
+<div class="case-card">
 
-      <div class="card-top">
-        <div>
-          <div class="case-name">👵 <%= row.elder_name || "ผู้สูงอายุ" %></div>
-          <div class="case-id">CASE #<%= row.id %></div>
-        </div>
-
-        
-      </div>
-
-      <div class="detail-box">
-        <%= row.detail || "ไม่มีรายละเอียด" %>
-      </div>
-
-      <form action="/volunteer/accept/<%= row.id %>" method="POST">
-        <button class="accept-btn">รับเคสนี้ 🤝</button>
-      </form>
-
+    <div class="case-name">
+        👵 ผู้สูงอายุ <%= row.elder_name || "ผู้สูงอายุ" %> ขอความช่วยเหลือ
     </div>
 
-  <% }) %>
+    <div class="case-id">
+        CASE #<%= row.id %>
+    </div>
 
-  </div>
+    <form action="/volunteer/accept/<%= row.id %>" method="POST">
+        <button class="accept-btn">
+            รับเคสนี้ 🤝
+        </button>
+    </form>
+
+</div>
+
+<% }) %>
+
+</div>
 
 </div>
 

@@ -106,6 +106,8 @@ router.post("/accept/:id", isVolunteer, async (req, res) => {
               { type: "separator" },
               { type: "text", text: "👤 อาสา: " + (c.vol_name || "-"), size: "md" },
               { type: "text", text: "📞 โทร: " + (c.vol_phone || "-"), size: "md" },
+              { type: "text", text: "💬 สามารถกดปุ่มด้านล่างเพื่อพูดคุยกับอาสาได้ทันที", size: "xs", color: "#888888", wrap: true, margin: "md" }
+
             ]
           }
         }

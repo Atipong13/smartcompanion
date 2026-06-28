@@ -219,28 +219,27 @@ if (activeVolunteer.length) {
   );
 
   // ✅ 👇 ใส่ตรงนี้เลย
- if (elder.length) {
-
+// ✅ ส่วนที่อาสาส่งข้อความหาผู้สูงอายุ (บรรทัดประมาณ 120)
+if (elder.length) {
   const to = elder[0].line_user_id;
 
-  // ✅ ส่งข้อความ
+  // ส่งข้อความ text ก่อน
   await safePush(to, {
     type: "text",
     text: `💬 ข้อความจากอาสา:\n${text}`
   });
 
   try {
-    // ✅ สร้างไฟล์เสียง
-    const fileName = `voice_${Date.now()}.mp3`;
-    const audioPath = await generateVoice(text, fileName);
+    // ✅ แก้ชื่อไฟล์เป็น .m4a และรับ duration จริง
+    const fileName = `voice_${Date.now()}.m4a`;
+    const voice = await generateVoice(text, fileName);
 
-    // ✅ URL จริงจาก ngrok
-// ✅ แก้เป็น
-const audioUrl = `${process.env.BASE_URL}${audioPath}`;
+    const audioUrl = `${process.env.BASE_URL}${voice.url}`;
+
     await safePush(to, {
       type: "audio",
       originalContentUrl: audioUrl,
-      duration: 5000
+      duration: voice.duration  // ✅ duration จริง ไม่ใช่ 5000
     });
 
   } catch (err) {
