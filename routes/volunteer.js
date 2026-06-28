@@ -48,7 +48,7 @@ router.post("/accept/:id", isVolunteer, async (req, res) => {
     const caseId = parseInt(req.params.id);
     const volunteerId = req.session.user.id;
 
-    // เช็คว่ามีเคสค้างอยู่ไหม
+    // เช็คว่ามีเคสค้าง
     const [activeCase] = await db.query(`
       SELECT id FROM help_requests
       WHERE volunteer_id=?
@@ -185,7 +185,7 @@ router.get("/mycase", isVolunteer, async (req, res) => {
 ====================== */
 router.post("/done/:id", isVolunteer, async (req, res) => {
   try {
-    // เช็คก่อนว่าเคสยังเปิดอยู่ไหม
+    // เช็คว่าเคสยังเปิดอยู่ไหม
     const [check] = await db.query(
       "SELECT id, status, elder_id FROM help_requests WHERE id=? AND volunteer_id=?",
       [req.params.id, req.session.user.id]
@@ -291,11 +291,9 @@ router.get("/history", isVolunteer, async (req, res) => {
     res.send("เกิดข้อผิดพลาด");
   }
 });
+
 /* =========================
-   EDIT PROFILE PAGE
-========================= */
-/* =========================
-   EDIT PROFILE PAGE
+แก้ไขโปรไฟล์
 ========================= */
 router.get("/edit-profile", isVolunteer, async (req, res) => {
 
@@ -319,8 +317,9 @@ router.get("/edit-profile", isVolunteer, async (req, res) => {
 });
 
 /* =========================
-   UPDATE PROFILE
-========================= */const bcrypt = require("bcrypt");
+   อัปเดต โปรไฟล์
+========================= */
+const bcrypt = require("bcrypt");
 
 router.post("/edit-profile", isVolunteer, async (req, res) => {
 

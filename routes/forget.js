@@ -6,9 +6,7 @@ const bcrypt = require("bcrypt");
 /* ===== LINE CLIENT ===== */
 const client = require("../config/line");
 
-/* =========================
-   GET PAGE
-========================= */
+
 router.get("/", (req, res) => {
 
   res.render("forgot-password", {
@@ -21,7 +19,7 @@ router.get("/", (req, res) => {
 });
 
 /* =========================
-   SEND OTP
+   ส่ง OTP
 ========================= */
 router.post("/", async (req, res) => {
 

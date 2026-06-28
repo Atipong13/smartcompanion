@@ -92,7 +92,7 @@ const completeFlex = (caseId) => ({
 });
 const handleMessage = async (event, user) => {
 
-  // ✅ เพิ่มการรับเสียง
+  //  เพิ่มการรับเสียง
   if (event.message.type === "audio") {
     return await handleAudio(event, user);
   }
@@ -123,7 +123,7 @@ const handleMessage = async (event, user) => {
 
 if (text === "ขอความช่วยเหลือ") {
 
-    // ✅ ตรวจสอบว่ามีเคสที่ยังไม่จบ
+    //  ตรวจสอบว่ามีเคสที่ยังไม่จบ
     const [openCases] = await db.query(
       "SELECT id FROM help_requests WHERE elder_id=? AND status IN ('waiting', 'accepted') LIMIT 1",
       [user.id]
@@ -136,14 +136,13 @@ if (text === "ขอความช่วยเหลือ") {
       };
     }
 
-    // ✅ สร้างเคสทันที (ตั้งเป็น urgent หรือ normal ตามที่คุณต้องการ)
+    //  สร้างเคสทันที (ตั้งเป็น urgent หรือ normal ตามที่คุณต้องการ)
     const [result] = await db.query(
       "INSERT INTO help_requests (elder_id, urgency, status, created_at) VALUES (?, ?, ?, NOW())",
       [user.id, "urgent", "waiting"]
     );
 
     // ✅ แจ้งอาสา
-// ✅ แก้เป็น
 await notifyVolunteers(result.insertId);
     // ✅ ตอบกลับผู้ใช้
     return {
@@ -177,7 +176,7 @@ await notifyVolunteers(result.insertId);
 
     const requestId = activeElder[0].id;
 
-    // ✅ บันทึกข้อความลง DB
+    //  บันทึกข้อความลง DB
     await db.query(
       "INSERT INTO messages (request_id, sender_id, message) VALUES (?, ?, ?)",
       [requestId, user.id, text]
@@ -198,7 +197,7 @@ await notifyVolunteers(result.insertId);
     return { type: "text", text: "ส่งข้อความถึงอาสาเรียบร้อยแล้วค่ะ 🙏" };
   }
 
-  /* ===== 2️⃣ อาสา → ผู้สูงอายุ ===== */
+  /* =====  อาสา → ผู้สูงอายุ ===== */
 const [activeVolunteer] = await db.query(
   "SELECT * FROM help_requests WHERE volunteer_id=? AND status='accepted' ORDER BY id DESC LIMIT 1",
   [user.id]
@@ -218,8 +217,7 @@ if (activeVolunteer.length) {
     [activeVolunteer[0].elder_id]
   );
 
-  // ✅ 👇 ใส่ตรงนี้เลย
-// ✅ ส่วนที่อาสาส่งข้อความหาผู้สูงอายุ (บรรทัดประมาณ 120)
+//  ส่วนที่อาสาส่งข้อความหาผู้สูงอายุ
 if (elder.length) {
   const to = elder[0].line_user_id;
 
@@ -230,7 +228,7 @@ if (elder.length) {
   });
 
   try {
-    // ✅ แก้ชื่อไฟล์เป็น .m4a และรับ duration จริง
+    //  ไฟล์เป็น .m4a และรับ duration จริง
     const fileName = `voice_${Date.now()}.m4a`;
     const voice = await generateVoice(text, fileName);
 
@@ -239,7 +237,7 @@ if (elder.length) {
     await safePush(to, {
       type: "audio",
       originalContentUrl: audioUrl,
-      duration: voice.duration  // ✅ duration จริง ไม่ใช่ 5000
+      duration: voice.duration  // 
     });
 
   } catch (err) {
@@ -275,7 +273,7 @@ const handleAudio = async (event, user) => {
 
     const requestId = activeCase[0].id;
 
-    // 📥 ดึงไฟล์เสียงจาก LINE
+    //  ดึงไฟล์เสียงจาก LINE
     const stream = await client.getMessageContent(event.message.id);
     const chunks = [];
     for await (const chunk of stream) {
@@ -289,7 +287,7 @@ const handleAudio = async (event, user) => {
       return { type: "text", text: "❌ ไม่สามารถดึงไฟล์เสียงได้" };
     }
 
-    // 💾 บันทึกไฟล์ลง disk
+    //  บันทึกไฟล์ลง disk
     const fileName = `audio_${Date.now()}.m4a`;
     const audioDir = path.join(process.cwd(), "public/audio");
 
@@ -301,17 +299,17 @@ const handleAudio = async (event, user) => {
     fs.writeFileSync(filePath, audioBuffer);
     console.log("saved to:", filePath);
 
-    // 🔗 URL สำหรับส่งให้ LINE
+    //  URL สำหรับส่งให้ LINE
     const audioUrl = `${process.env.BASE_URL}/audio/${fileName}`;
     console.log("audioUrl:", audioUrl);
 
-    // 📝 บันทึก DB
+    //  บันทึก DB
     await db.query(
       "INSERT INTO messages (request_id, sender_id, message, created_at) VALUES (?, ?, ?, NOW())",
       [requestId, user.id, `[เสียง 🎤] ${audioUrl}`]
     );
 
-    // 📤 ส่งให้อาสา
+    //  ส่งให้อาสา
     const [vol] = await db.query(
       "SELECT line_user_id FROM users WHERE id=?",
       [activeCase[0].volunteer_id]
@@ -324,7 +322,7 @@ const handleAudio = async (event, user) => {
       return { type: "text", text: "❌ ไม่พบข้อมูลอาสา" };
     }
 
-    // ✅ เช็ค URL เข้าถึงได้ก่อนส่ง
+    //  เช็ค URL เข้าถึงได้ก่อนส่ง
     const https = require("https");
     const urlCheck = await new Promise((resolve) => {
       https.get(audioUrl, (res) => {
@@ -341,13 +339,13 @@ const handleAudio = async (event, user) => {
       return { type: "text", text: "❌ ไฟล์เสียงเข้าถึงไม่ได้ กรุณาเช็ค BASE_URL" };
     }
 
-    // ✅ ส่งข้อความแจ้งอาสา
+    //  ส่งข้อความแจ้งอาสา
     await safePush(vol[0].line_user_id, {
       type: "text",
       text: "🎤 ได้รับเสียงจากผู้สูงอายุ"
     });
 
-    // ✅ ส่งไฟล์เสียงจริง
+    //  ส่งไฟล์เสียงจริง
     await safePush(vol[0].line_user_id, {
       type: "audio",
       originalContentUrl: audioUrl,
@@ -399,7 +397,7 @@ if (data.startsWith("accept_")) {
     return { type: "text", text: "❌ เคสนี้มีคนรับแล้ว" };
   }
 
-  // ✅ ดึงข้อมูลเคส + ผู้สูงอายุ + อาสา พร้อมกัน
+  //  ดึงข้อมูลเคส + ผู้สูงอายุ + อาสา พร้อมกัน
   const [caseData] = await db.query(`
     SELECT hr.detail,
            elder.name AS elder_name,
@@ -492,7 +490,7 @@ if (data.startsWith("accept_")) {
 /* ================= ขอโลเคชั่น ================= */
 if (data.startsWith("request_location_")) {
 
-  // ✅ แก้ให้ชัดเจนขึ้น ป้องกัน caseId ผิด
+  // ป้องกัน caseId ผิด
   const caseId = data.replace("request_location_", "");
   console.log("request_location caseId:", caseId); // debug
 
@@ -505,7 +503,7 @@ if (data.startsWith("request_location_")) {
     [caseId]
   );
 
-  console.log("caseData:", caseData); // debug ดูว่ามีข้อมูลไหม
+  console.log("caseData:", caseData); 
 
   if (!caseData.length) {
     return { type: "text", text: "❌ ไม่พบข้อมูลเคส" };
@@ -516,7 +514,7 @@ if (data.startsWith("request_location_")) {
     [caseData[0].elder_id]
   );
 
-  console.log("elder:", elder); // debug
+  console.log("elder:", elder); 
 
   if (!elder.length) {
     return { type: "text", text: "❌ ไม่พบข้อมูลผู้สูงอายุ" };
@@ -532,7 +530,7 @@ if (data.startsWith("request_location_")) {
     };
   }
 
-  // ✅ ส่ง Quick Reply ให้ผู้สูงอายุ
+  //  ส่ง Quick Reply ให้ผู้สูงอายุ
   await safePush(elder[0].line_user_id, {
     type: "text",
     text: "📍 อาสาขอทราบตำแหน่งของคุณค่ะ กรุณากดปุ่มด้านล่าง",
@@ -562,7 +560,7 @@ if (data.startsWith("request_location_")) {
     return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
   }
 
-  // ✅ เช็คว่าเคสนี้ยังเปิดอยู่ไหม
+  //  เช็คว่าเคสนี้ยังเปิดอยู่ไหม
   const [check] = await db.query(
     "SELECT id, status FROM help_requests WHERE id=?",
     [caseId]
@@ -576,7 +574,7 @@ if (data.startsWith("request_location_")) {
     return { type: "text", text: "⚠️ เคสนี้ถูกจบไปแล้ว" };
   }
 
-  // ✅ จบเคส
+  //  จบเคส
   await db.query(
     "UPDATE help_requests SET status='completed', completed_at=NOW() WHERE id=?",
     [caseId]
@@ -701,7 +699,7 @@ if (data.startsWith("request_location_")) {
 const handleLocation = async (event, user) => {
   try {
 
-    // 🔥 กัน event พัง
+    //  กัน event พัง
     if (!event?.message || event.message.type !== "location") {
       return { type: "text", text: "❌ ไม่ใช่ตำแหน่ง" };
     }
@@ -709,7 +707,7 @@ const handleLocation = async (event, user) => {
     const latitude = event.message.latitude;
     const longitude = event.message.longitude;
 
-    // 🔥 หาเคสที่ active ล่าสุด
+    //  หาเคสที่ active ล่าสุด
     const [caseData] = await db.query(
       "SELECT * FROM help_requests WHERE elder_id=? AND status='accepted' ORDER BY id DESC LIMIT 1",
       [user.id]
@@ -721,19 +719,19 @@ const handleLocation = async (event, user) => {
 
     const caseId = caseData[0].id;
 
-    // 🔥 บันทึกพิกัด
+    //  บันทึกพิกัด
     await db.query(
       "UPDATE help_requests SET latitude=?, longitude=? WHERE id=?",
       [latitude, longitude, caseId]
     );
 
-    // 🔥 หาอาสา
+    //  หาอาสา
     const [vol] = await db.query(
       "SELECT line_user_id FROM users WHERE id=?",
       [caseData[0].volunteer_id]
     );
 
-    // 🔥 ส่งให้ volunteer
+    //  ส่งให้ volunteer
     if (vol.length) {
       await safePush(vol[0].line_user_id, {
         type: "location",
@@ -798,7 +796,7 @@ const notifyVolunteers = async (caseId) => {
     }
   };
 
-  // ✅ เปลี่ยนจาก for loop → multicast
+
   const userIds = vols.map(v => v.line_user_id);
   try {
     await client.multicast(userIds, flexMessage);

@@ -67,7 +67,6 @@ cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
 
-    // แจ้งเตือนกิจกรรม
 // แจ้งเตือนกิจกรรม
 const [rows] = await db.query(`
   SELECT a.*, u.line_user_id FROM activities a
@@ -160,14 +159,14 @@ async function handleEvent(event) {
   let user;
 
   if (!users.length) {
-    // user ใหม่ → ถ้าไม่รู้ชื่อ ใช้ userId แทนชั่วคราว
+    // user ใหม่ ถ้าไม่รู้ชื่อ ใช้ userId แทนชั่วคราว
     const [result] = await db.query(
       "INSERT INTO users (line_user_id, name, role, status) VALUES (?, ?, 'elder', 'approved')",
       [userId, name ?? userId]
     );
     user = { id: result.insertId, line_user_id: userId, role: "elder", status: "approved" };
   } else {
-    // user เก่า → อัปเดตชื่อเฉพาะเมื่อดึงชื่อได้สำเร็จ
+    // user เก่า อัปเดตชื่อเฉพาะเมื่อดึงชื่อได้สำเร็จ
     if (name) {
       await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
     }

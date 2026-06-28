@@ -61,7 +61,6 @@ const notifyVolunteers = async (msg, aiReply, userId) => {
 };
 
 // ตอบกลับพร้อมเสียง
-// ✅ แก้แล้ว
 const replyWithVoice = async (client, event, aiReply, hasNotified) => {
   const filename = `ai_${Date.now()}`;              // ✅ ไม่ต้องใส่ .mp3 แล้ว
   const voice = await generateVoice(aiReply.reply, filename); // ✅ รับเป็น object

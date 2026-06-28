@@ -16,7 +16,7 @@ const generateVoice = (text, filename) => {
       const mp3Path = path.join(audioDir, `${baseName}.mp3`);
       const m4aPath = path.join(audioDir, `${baseName}.m4a`);
 
-      // Step 1: สร้าง MP3
+      //  สร้าง MP3
       const gtts = new gTTS(text, "th");
       await new Promise((res, rej) => {
         gtts.save(mp3Path, (err) => {
@@ -26,7 +26,7 @@ const generateVoice = (text, filename) => {
         });
       });
 
-      // Step 2: แปลงเป็น M4A
+      //  แปลงเป็น M4A
       await new Promise((res, rej) => {
         ffmpeg(mp3Path)
           .toFormat("ipod")
@@ -37,7 +37,7 @@ const generateVoice = (text, filename) => {
           .save(m4aPath);
       });
 
-      // Step 3: วัด duration
+      //  วัด duration
       const durationSec = await getAudioDurationInSeconds(m4aPath);
       const durationMs = Math.ceil(durationSec * 1000);
 
@@ -50,4 +50,4 @@ const generateVoice = (text, filename) => {
   });
 };
 
-module.exports = generateVoice; // ✅ export ตรงๆ
+module.exports = generateVoice; 
