@@ -383,6 +383,30 @@ tr.row-link:hover{
   margin-top:8px;
 }
 
+.detail-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:8px 16px;
+  border-radius:12px;
+  background:#2563eb33;
+  color:#60a5fa;
+  font-size:12.5px;
+  font-weight:600;
+  white-space:nowrap;
+  transition:.2s;
+}
+
+.detail-btn:hover{
+  background:#2563eb55;
+  color:#93c5fd;
+}
+
+.detail-cell{
+  text-align:center;
+}
+
 .empty-row td{
   text-align:center;
   color:#94a3b8;
@@ -394,7 +418,7 @@ tr.row-link:hover{
 .ai-item{
   display:flex;
   justify-content:space-between;
-  align-items:flex-start;
+  align-items:center;
   gap:12px;
   padding:14px 0;
   border-bottom:1px solid rgba(255,255,255,.06);
@@ -465,9 +489,7 @@ tr.row-link:hover{
 }
 
 </style>
-</head>
-
-<body>
+</head><body>
 
 <!-- SIDEBAR -->
 
@@ -578,8 +600,7 @@ tr.row-link:hover{
               <th>#</th>
               <th>ผู้สูงอายุ</th>
               <th>อาสา</th>
-              <th>ความเสี่ยง</th>
-              <th>รายละเอียด</th>
+              <th class="detail-cell">รายละเอียด</th>
               <th>สถานะ</th>
               <th>วันที่</th>
             </tr>
@@ -596,20 +617,12 @@ tr.row-link:hover{
 
                   <td><%= row.volunteer_name || '-' %></td>
 
-                  <td>
-                    <% if(row.risk=="high"){ %>
-                      <span class="risk high">🚨 HIGH</span>
-                    <% } else if(row.risk=="medium"){ %>
-                      <span class="risk medium">MEDIUM</span>
-                    <% } else { %>
-                      <span class="risk low">LOW</span>
-                    <% } %>
-                  </td>
-
-                  <td>
-                    <%= row.detail ? row.detail.substring(0,40) : '-' %><%= (row.detail && row.detail.length > 40) ? '...' : '' %>
-                    <br>
-                    <a href="/admin/reports/<%= row.id %>" class="detail-link">ดูรายละเอียด</a>
+                  <td class="detail-cell">
+                    <a href="/admin/reports/<%= row.id %>"
+                       onclick="event.stopPropagation()"
+                       class="detail-btn">
+                      🔍 ดูรายละเอียด
+                    </a>
                   </td>
 
                   <td>
@@ -631,7 +644,7 @@ tr.row-link:hover{
             <% } else { %>
 
               <tr class="empty-row">
-                <td colspan="7">ไม่มีข้อมูลในช่วงที่เลือก</td>
+                <td colspan="6">ไม่มีข้อมูลในช่วงที่เลือก</td>
               </tr>
 
             <% } %>
@@ -670,10 +683,17 @@ tr.row-link:hover{
               <div>
                 <div class="name"><%= item.elderly_name || item.name || 'ไม่ระบุชื่อ' %></div>
                 <div class="detail">
-                  <%= item.detail ? item.detail.substring(0,60) : 'ไม่มีรายละเอียดเพิ่มเติม' %><%= (item.detail && item.detail.length > 60) ? '...' : '' %>
+                  <%= item.detail ? item.detail.substring(0,60) : (item.message ? item.message.substring(0,60) : 'ไม่มีรายละเอียดเพิ่มเติม') %><%= ((item.detail && item.detail.length > 60) || (item.message && item.message.length > 60)) ? '...' : '' %>
                 </div>
+                <% if(item.risk=="emergency"){ %>
+                  <span class="risk emergency">🆘 EMERGENCY</span>
+                <% } else { %>
+                  <span class="risk high">HIGH</span>
+                <% } %>
               </div>
-              <span class="risk high">HIGH</span>
+              <a href="/admin/case-report/<%= item.id %>" class="detail-btn">
+                🔍 ดูรายละเอียด
+              </a>
             </div>
           <% }) %>
 

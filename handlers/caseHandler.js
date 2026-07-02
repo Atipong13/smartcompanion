@@ -1,4 +1,3 @@
-// handlers/caseHandler.js
 const db = require("../config/db");
 const { safePush } = require("../utils/safePush");
 
@@ -111,8 +110,15 @@ const handleCasePostback = async (event, user, client, userStates) => {
 
     const elderLineId = caseData[0].line_user_id;
 
-    userStates[userId] = { mode: "case_chat", role: "volunteer", caseId, partnerId: elderLineId };
-    userStates[elderLineId] = { mode: "case_chat", role: "elder", caseId, partnerId: userId };
+    // ✅ เพิ่ม: หา users.id ของผู้สูงอายุ (user.id ของอาสามีอยู่แล้วใน `user` object)
+    const [elderUser] = await db.query(
+      "SELECT id FROM users WHERE line_user_id=?",
+      [elderLineId]
+    );
+    const elderDbId = elderUser.length ? elderUser[0].id : null;
+
+    userStates[userId] = { mode: "case_chat", role: "volunteer", caseId, partnerId: elderLineId, dbUserId: user.id };
+    userStates[elderLineId] = { mode: "case_chat", role: "elder", caseId, partnerId: userId, dbUserId: elderDbId };
 
     await safePush(elderLineId, {
       type: "text",

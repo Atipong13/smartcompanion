@@ -263,16 +263,19 @@ router.post("/done/:id", isVolunteer, async (req, res) => {
 router.get("/history", isVolunteer, async (req, res) => {
   try {
 
-    const [rows] = await db.query(`
+    const volunteerId = req.session.user.id;
+
+    /* ---------- ประวัติคำขอช่วยเหลือปกติ (help_requests) ---------- */
+    const [normalRows] = await db.query(`
       SELECT hr.*, u.name AS elder_name
       FROM help_requests hr
       JOIN users u ON hr.elder_id = u.id
       WHERE hr.volunteer_id = ?
       AND hr.status = 'completed'
       ORDER BY hr.id DESC
-    `, [req.session.user.id]);
+    `, [volunteerId]);
 
-    for (let row of rows) {
+    for (let row of normalRows) {
       const [messages] = await db.query(`
         SELECT m.*, u.name
         FROM messages m
@@ -282,9 +285,43 @@ router.get("/history", isVolunteer, async (req, res) => {
       `, [row.id]);
 
       row.messages = messages;
+      row.urgency = 'normal';
     }
 
-    res.render("history", { data: rows });
+    /* ---------- ประวัติเคสด่วนจาก AI (cases) ---------- */
+    const [urgentRows] = await db.query(`
+      SELECT c.*,
+       u.name AS elder_name,
+       c.message AS detail,
+       c.created_at AS completed_at
+FROM cases c
+LEFT JOIN users u ON c.line_user_id = u.line_user_id
+WHERE c.volunteer_id = ?
+AND c.status = 'done'
+ORDER BY c.id DESC
+    `, [volunteerId]);
+
+    for (let row of urgentRows) {
+      const [messages] = await db.query(`
+        SELECT cm.*, u.name
+        FROM case_messages cm
+        JOIN users u ON cm.sender_id = u.id
+        WHERE cm.case_id = ?
+        ORDER BY cm.created_at ASC
+      `, [row.id]);
+
+      row.messages = messages;
+      row.urgency = 'urgent';
+    }
+
+    /* ---------- รวมสองประเภท เรียงตามวันที่จบล่าสุด ---------- */
+    const data = [...normalRows, ...urgentRows].sort((a, b) => {
+      const dateA = new Date(a.completed_at || 0);
+      const dateB = new Date(b.completed_at || 0);
+      return dateB - dateA;
+    });
+
+    res.render("history", { data });
 
   } catch (err) {
     console.error(err);

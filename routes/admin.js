@@ -324,12 +324,31 @@ router.get("/reports", isAdmin, async (req, res) => {
       WHERE role='elder'
     `);
 
-    // ===== AI High Risk =====
+    // ===== AI High Risk / Emergency =====
+    // NOTE: table name assumed as "messages" based on the columns
+    // (id, message, risk, status, assigned_to, created_at, volunteer_id, lat, lng, line_user_id)
+    // แก้ชื่อตารางตรงนี้ถ้าจริงๆไม่ใช่ "messages"
+
+    const highRiskWhere = where
+      ? where.replace(/created_at/g, "m.created_at") + " AND m.risk IN ('high','emergency')"
+      : "WHERE m.risk IN ('high','emergency')";
 
     const [[highRisk]] = await db.query(`
       SELECT COUNT(*) AS total
-      FROM cases
-      WHERE risk='high'
+      FROM cases m
+      ${highRiskWhere}
+    `);
+
+    const [highRiskList] = await db.query(`
+      SELECT
+        m.*,
+        u.name AS elderly_name
+      FROM cases m
+      LEFT JOIN users u
+      ON m.line_user_id = u.line_user_id
+      ${highRiskWhere}
+      ORDER BY m.created_at DESC
+      LIMIT 10
     `);
 
     // ===== History =====
@@ -360,6 +379,7 @@ router.get("/reports", isAdmin, async (req, res) => {
       totalElders: elder.total,
 
       highRiskCases: highRisk.total,
+      highRiskList,
 
       history,
 
@@ -409,6 +429,50 @@ e.name as elderly_name,             v.name as volunteer_name
     });
 
   } catch (err) {
+    res.send("DB ERROR");
+  }
+});
+
+/* =========================
+   CASE DETAIL (เคส AI)
+   /admin/case-report/:id
+   แยกจาก /admin/reports/:id เพราะ cases.id กับ help_requests.id
+   เป็นคนละ sequence กัน ใช้ id เดียวกันปนกันไม่ได้
+========================= */
+router.get("/case-report/:id", isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const [caseRows] = await db.query(`
+      SELECT
+        c.*,
+        e.name AS elderly_name,
+        v.name AS volunteer_name
+      FROM cases c
+      LEFT JOIN users e ON c.line_user_id = e.line_user_id
+      LEFT JOIN users v ON c.volunteer_id = v.id
+      WHERE c.id = ?
+    `,[id]);
+
+    if (!caseRows.length) {
+      return res.send("ไม่พบเคสนี้");
+    }
+
+    const [messages] = await db.query(`
+      SELECT cm.*, u.name
+      FROM case_messages cm
+      JOIN users u ON cm.sender_id = u.id
+      WHERE cm.case_id = ?
+      ORDER BY cm.created_at ASC
+    `,[id]);
+
+    res.render("case-detail",{
+      caseData: caseRows[0],
+      messages
+    });
+
+  } catch (err) {
+    console.log(err);
     res.send("DB ERROR");
   }
 });

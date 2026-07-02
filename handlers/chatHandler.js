@@ -1,8 +1,8 @@
-// handlers/chatHandler.js
 const fs = require("fs");
 const path = require("path");
 const { safePush } = require("../utils/safePush");
 const generateVoice = require("../utils/voiceService");
+const { logCaseMessage } = require("../utils/caseMessageLogger"); // ✅ เพิ่ม
 
 const handleCaseChat = async (event, userId, userStates, client) => {
   const state = userStates[userId];
@@ -28,10 +28,18 @@ const handleCaseChat = async (event, userId, userStates, client) => {
         { type: "text", text: "👨‍⚕️ อาสา\n" + event.message.text },
         { type: "audio", originalContentUrl: audioUrl, duration: voice.duration }
       ]);
+
+      // ✅ เพิ่ม: บันทึกลง case_messages (คนละตารางกับ messages ของ help_requests ปกติ)
+      await logCaseMessage(state.caseId, state.dbUserId, event.message.text, "text");
+
       return { type: "text", text: "✅ ส่งข้อความและเสียงแล้ว" };
     }
 
     await safePush(state.partnerId, { type: "text", text: "👵 ผู้สูงอายุ\n" + event.message.text });
+
+    // ✅ เพิ่ม
+    await logCaseMessage(state.caseId, state.dbUserId, event.message.text, "text");
+
     return { type: "text", text: "✅ ส่งข้อความแล้ว" };
   }
 
@@ -56,6 +64,9 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       duration: event.message.duration || 10000
     });
 
+    // ✅ เพิ่ม: เก็บ placeholder (ไฟล์เสียงจริงถูกลบทิ้งหลัง 10 วิ เก็บไฟล์ไม่ได้)
+    await logCaseMessage(state.caseId, state.dbUserId, "[ข้อความเสียง]", "audio");
+
     // ✅ ลบไฟล์หลัง 10 วินาที
     setTimeout(() => {
       fs.unlink(filePath, () => console.log("🗑 ลบไฟล์เสียงแล้ว:", fileName));
@@ -71,6 +82,10 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       originalContentUrl: `${process.env.BASE_URL}/proxy/${event.message.id}`,
       previewImageUrl: `${process.env.BASE_URL}/proxy/${event.message.id}`
     });
+
+    // ✅ เพิ่ม
+    await logCaseMessage(state.caseId, state.dbUserId, "[รูปภาพ]", "image");
+
     return { type: "text", text: "✅ ส่งรูปแล้ว" };
   }
 
@@ -99,6 +114,10 @@ const handleCaseChat = async (event, userId, userStates, client) => {
         }
       }
     });
+
+    // ✅ เพิ่ม
+    await logCaseMessage(state.caseId, state.dbUserId, `[ตำแหน่ง] ${lat},${lng}`, "location");
+
     return { type: "text", text: "✅ ส่งตำแหน่งแล้ว" };
   }
 

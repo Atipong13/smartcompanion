@@ -295,7 +295,6 @@ async function handleEvent(event) {
 
   return null;
 }
-
 /* ================= HISTORY HANDLER ================= */
 async function handleHistory(event, user, client) {
   const safeText = (text, len = 35) => text ? text.substring(0, len) : "-";
@@ -304,21 +303,37 @@ async function handleHistory(event, user, client) {
     return new Date(date).toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   };
   const statusColor = (s) =>
-    s === "completed" ? "#27ae60" : s === "waiting" ? "#f39c12" : s === "accepted" ? "#2980b9" : s === "cancelled" ? "#e74c3c" : "#888888";
+    s === "completed" || s === "done" ? "#27ae60" :
+    s === "waiting" || s === "open" ? "#f39c12" :
+    s === "accepted" ? "#2980b9" :
+    s === "cancelled" ? "#e74c3c" : "#888888";
+
+  // ระดับความเสี่ยงของเคสจาก AI (ตาราง cases) -> label + สี ให้ตรงกับความจริง
+  const riskLabel = (risk) => {
+    if (risk === "emergency") return { text: "🆘 ฉุกเฉิน", color: "#e74c3c" };
+    if (risk === "high")      return { text: "🚨 ความเสี่ยงสูง", color: "#e67e22" };
+    if (risk === "medium")    return { text: "⚠️ ความเสี่ยงปานกลาง", color: "#f39c12" };
+    return { text: "🟢 ความเสี่ยงต่ำ", color: "#27ae60" };
+  };
 
   if (user.role === "volunteer") {
     const [helps] = await db.query(
-      "SELECT detail, status, urgency, created_at FROM help_requests WHERE volunteer_id=? ORDER BY created_at DESC LIMIT 5", [user.id]
+      `SELECT h.status, h.created_at, u.name AS elder_name
+       FROM help_requests h
+       JOIN users u ON h.elder_id = u.id
+       WHERE h.volunteer_id=? ORDER BY h.created_at DESC LIMIT 5`, [user.id]
     );
     const [chats] = await db.query(
       `SELECT m.message, m.sender_id, m.created_at FROM messages m
        JOIN help_requests h ON m.request_id=h.id WHERE h.volunteer_id=? ORDER BY m.created_at DESC LIMIT 5`, [user.id]
     );
+    const [aiCases] = await db.query(
+      "SELECT message, risk, status, created_at FROM cases WHERE volunteer_id=? ORDER BY created_at DESC LIMIT 5", [user.id]
+    );
 
     const helpBox = helps.length
       ? helps.map(h => ({ type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
-          { type: "text", text: "🆘 " + (h.detail || "-"), size: "sm", weight: "bold", wrap: true },
-          { type: "text", text: h.urgency === "urgent" ? "🔴 เร่งด่วน" : "🟢 ไม่เร่งด่วน", size: "xs", color: h.urgency === "urgent" ? "#e74c3c" : "#27ae60" },
+          { type: "text", text: "👵 " + (h.elder_name || "-"), size: "sm", weight: "bold", wrap: true },
           { type: "text", text: h.status, size: "xs", color: statusColor(h.status) },
           { type: "text", text: formatDate(h.created_at), size: "xs", color: "#888888" }
         ]}))
@@ -332,9 +347,22 @@ async function handleHistory(event, user, client) {
         ]}))
       : [{ type: "text", text: "ไม่มีแชท", size: "sm", color: "#999999" }];
 
+    const caseBox = aiCases.length
+      ? aiCases.map(c => {
+          const r = riskLabel(c.risk);
+          return { type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
+            { type: "text", text: "🤖 " + (c.message || "-"), size: "sm", weight: "bold", wrap: true },
+            { type: "text", text: r.text, size: "xs", color: r.color },
+            { type: "text", text: c.status, size: "xs", color: statusColor(c.status) },
+            { type: "text", text: formatDate(c.created_at), size: "xs", color: "#888888" }
+          ]};
+        })
+      : [{ type: "text", text: "ไม่มีเคสด่วนจาก AI", size: "sm", color: "#999999" }];
+
     return client.replyMessage(event.replyToken, {
       type: "flex", altText: "ประวัติของคุณ",
       contents: { type: "carousel", contents: [
+        { type: "bubble", body: { type: "box", layout: "vertical", spacing: "md", contents: [{ type: "text", text: "🚨 เคสด่วนจาก AI", weight: "bold", size: "lg" }, { type: "separator" }, ...caseBox] } },
         { type: "bubble", body: { type: "box", layout: "vertical", spacing: "md", contents: [{ type: "text", text: "🆘 คำขอช่วยเหลือ", weight: "bold", size: "lg" }, { type: "separator" }, ...helpBox] } },
         { type: "bubble", body: { type: "box", layout: "vertical", spacing: "md", contents: [{ type: "text", text: "💬 แชทล่าสุด", weight: "bold", size: "lg" }, { type: "separator" }, ...chatBox] } }
       ]}
@@ -343,7 +371,10 @@ async function handleHistory(event, user, client) {
 
   // elder
   const [helps] = await db.query(
-    "SELECT detail, status, created_at FROM help_requests WHERE elder_id=? ORDER BY created_at DESC LIMIT 5", [user.id]
+    `SELECT h.status, h.created_at, v.name AS volunteer_name
+     FROM help_requests h
+     LEFT JOIN users v ON h.volunteer_id = v.id
+     WHERE h.elder_id=? ORDER BY h.created_at DESC LIMIT 5`, [user.id]
   );
   const [activities] = await db.query(
     "SELECT title, status, activity_time FROM activities WHERE created_by=? ORDER BY activity_time DESC LIMIT 5", [user.id]
@@ -352,12 +383,15 @@ async function handleHistory(event, user, client) {
     `SELECT m.message, m.sender_id, m.created_at FROM messages m
      JOIN help_requests h ON m.request_id=h.id WHERE h.elder_id=? ORDER BY m.created_at DESC LIMIT 5`, [user.id]
   );
+  const [aiCases] = await db.query(
+    "SELECT message, risk, status, created_at FROM cases WHERE line_user_id=? ORDER BY created_at DESC LIMIT 5", [user.line_user_id]
+  );
 
   const mkBox = (items, emptyText, fn) =>
     items.length ? items.map(fn) : [{ type: "text", text: emptyText, size: "md", color: "#999999", align: "center", margin: "lg" }];
 
   const helpBoxes = mkBox(helps, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
-    { type: "text", text: "🆘 " + safeText(i.detail), size: "md", wrap: true },
+    { type: "text", text: "🙋‍♂️ " + (i.volunteer_name || "ยังไม่มีอาสารับเคส"), size: "md", wrap: true },
     { type: "text", text: i.status + " • " + formatDate(i.created_at), size: "sm", color: statusColor(i.status) }
   ]}));
   const actBoxes = mkBox(activities, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
@@ -368,17 +402,24 @@ async function handleHistory(event, user, client) {
     { type: "text", text: (c.sender_id == user.id ? "คุณ: " : "อาสา: ") + safeText(c.message), size: "md", wrap: true },
     { type: "text", text: formatDate(c.created_at), size: "sm", color: "#888888" }
   ]}));
+  const caseBoxes = mkBox(aiCases, "ไม่มีเคสด่วน", i => {
+    const r = riskLabel(i.risk);
+    return { type: "box", layout: "vertical", margin: "md", contents: [
+      { type: "text", text: "🤖 " + safeText(i.message), size: "md", wrap: true },
+      { type: "text", text: r.text + " • " + formatDate(i.created_at), size: "sm", color: r.color }
+    ]};
+  });
 
   return client.replyMessage(event.replyToken, {
     type: "flex", altText: "ประวัติย้อนหลัง",
     contents: { type: "carousel", contents: [
+      { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#c0392b", paddingAll: "15px", contents: [{ type: "text", text: "🚨 เคสด่วน (AI)", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: caseBoxes } },
       { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#2c3e50", paddingAll: "15px", contents: [{ type: "text", text: "🆘 คำขอช่วยเหลือ", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: helpBoxes } },
       { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#34495e", paddingAll: "15px", contents: [{ type: "text", text: "📅 กิจกรรม", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: actBoxes } },
       { type: "bubble", header: { type: "box", layout: "vertical", backgroundColor: "#16a085", paddingAll: "15px", contents: [{ type: "text", text: "💬 แชทล่าสุด", weight: "bold", size: "lg", color: "#ffffff" }] }, body: { type: "box", layout: "vertical", contents: chatBoxes } }
     ]}
   });
 }
-
 /* ================= EXPRESS CONFIG ================= */
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
