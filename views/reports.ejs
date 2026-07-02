@@ -742,14 +742,15 @@ tr.row-link:hover{
 
 <script>
 
-/* ===== values injected from server ===== */
 
-const totalCases       = <%= totalCases || 0 %>;
-const workingCases      = <%= workingCases || 0 %>;
-const doneCases         = <%= doneCases || 0 %>;
-const totalVolunteers   = <%= totalVolunteers || 0 %>;
-const totalElders       = <%= totalElders || 0 %>;
-const highRiskCases     = <%= highRiskCases || 0 %>;
+const serverData = document.getElementById('server-data').dataset;
+
+const totalCases       = Number(serverData.totalCases) || 0;
+const workingCases     = Number(serverData.workingCases) || 0;
+const doneCases        = Number(serverData.doneCases) || 0;
+const totalVolunteers  = Number(serverData.totalVolunteers) || 0;
+const totalElders      = Number(serverData.totalElders) || 0;
+const highRiskCases    = Number(serverData.highRiskCases) || 0;
 
 /* ===== LINE CHART ===== */
 
