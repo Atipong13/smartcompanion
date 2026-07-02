@@ -3,3 +3,4 @@ node_modules/
 images/uploads/
 logs/
 *.log
+public/audio/
