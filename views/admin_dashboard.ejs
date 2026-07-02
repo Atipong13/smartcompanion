@@ -403,81 +403,60 @@ body{
   <% } %>
 
   <!-- CARDS -->
+<div class="cards-grid" id="cardsGrid">
 
-  <div class="cards-grid" id="cardsGrid">
+  <% data.forEach(row=>{ %>
 
-    <% data.forEach(row=>{ %>
+    <%
+      let statusClass='waiting';
+      let statusText='รอรับเคส';
 
-      <%
+      if(row.status==='accepted'){
+        statusClass='working';
+        statusText='กำลังดำเนินการ';
+      }
 
-        let statusClass='waiting';
-        let statusText='รอรับเคส';
+      if(row.status==='done'){
+        statusClass='done';
+        statusText='เสร็จสิ้น';
+      }
+    %>
 
-        if(row.status==='accepted'){
+    <div class="card case-card">
 
-          statusClass='working';
-          statusText='กำลังดำเนินการ';
+      <!-- TOP -->
+      <div class="card-top">
 
-        }
+        <div class="user">
+  👵 <%= row.elderly_name || 'ไม่พบชื่อผู้สูงอายุ' %>
+</div>
 
-        if(row.status==='done'){
-
-          statusClass='done';
-          statusText='เสร็จสิ้น';
-
-        }
-
-      %>
-
-      <div
-        class="card case-card"
-data-detail="<%= (row.detail || '').toLowerCase() %>"      >
-
-        <!-- TOP -->
-
-        <div class="card-top">
-
-          <div class="user">
-            👵 <%= row.elder_name %>
-          </div>
-
-          <span class="badge <%= statusClass %>">
-            <%= statusText %>
-          </span>
-
-        </div>
-
-        <!-- DETAILS -->
-
-        <div class="details">
-
-          <span class="label">
-            📝 รายละเอียด:
-          </span>
-
-          <br>
-
-          <%= row.detail %>
-
-          <br><br>
-
-          <span class="label">
-            🙋 อาสา:
-          </span>
-
-          <br>
-
-          <strong>
-            <%= row.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
-          </strong>
-
-        </div>
+        <span class="badge <%= statusClass %>">
+          <%= statusText %>
+        </span>
 
       </div>
 
-    <% }) %>
+      <!-- ONLY VOLUNTEER -->
+      <div class="details">
 
-  </div>
+        <span class="label">
+          🙋 อาสา:
+        </span>
+
+        <br>
+
+        <strong>
+          <%= row.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
+        </strong>
+
+      </div>
+
+    </div>
+
+  <% }) %>
+
+</div>
 
 </div>
 
