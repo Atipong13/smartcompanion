@@ -98,6 +98,44 @@ body{
   color:#ff6b6b;
 }
 
+/* FILTER TABS */
+.filter-box{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+}
+
+.filter-btn{
+  padding:10px 18px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  font-family:'Prompt',sans-serif;
+  font-size:14px;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.filter-btn:hover{
+  transform:translateY(-2px);
+  background:rgba(255,255,255,0.12);
+}
+
+.filter-btn.active{
+  background:#00e5ff;
+  color:#003344;
+  border-color:#00e5ff;
+  font-weight:600;
+}
+
+.filter-btn.active[data-filter="urgent"]{
+  background:#ff4d4d;
+  color:#3b0000;
+  border-color:#ff4d4d;
+}
+
 /* EMPTY */
 .empty{
   text-align:center;
@@ -238,6 +276,13 @@ body{
   </div>
 </div>
 
+<!-- FILTER TABS -->
+<div class="filter-box">
+  <button class="filter-btn active" data-filter="all" onclick="filterCases('all', this)">ทั้งหมด</button>
+  <button class="filter-btn" data-filter="urgent" onclick="filterCases('urgent', this)">🚨 เคสด่วน (AI)</button>
+  <button class="filter-btn" data-filter="normal" onclick="filterCases('normal', this)">📋 เคสปกติ</button>
+</div>
+
 <!-- EMPTY -->
 <% if(!data || data.length === 0){ %>
   <div class="empty">🤍 ไม่มีประวัติงาน</div>
@@ -246,7 +291,7 @@ body{
 <!-- CARD LOOP -->
 <% (data||[]).forEach((row,i)=>{ %>
 
-<div class="card <%= row.urgency === 'urgent' ? 'urgent' : 'normal' %>">
+<div class="card <%= row.urgency === 'urgent' ? 'urgent' : 'normal' %>" data-urgency="<%= row.urgency === 'urgent' ? 'urgent' : 'normal' %>">
 
   <!-- HEADER -->
   <div class="card-header">
@@ -297,7 +342,32 @@ body{
 
 <% }) %>
 
+<!-- EMPTY FILTER RESULT (shown by JS when a filter has no matches) -->
+<div class="empty" id="emptyFilter" style="display:none">🤍 ไม่มีเคสในหมวดนี้</div>
+
 </div>
+
+<script>
+function filterCases(type, btn){
+  // toggle active button state
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const cards = document.querySelectorAll('.card[data-urgency]');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const match = (type === 'all') || (card.getAttribute('data-urgency') === type);
+    card.style.display = match ? '' : 'none';
+    if(match) visibleCount++;
+  });
+
+  const emptyFilter = document.getElementById('emptyFilter');
+  if(emptyFilter){
+    emptyFilter.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+  }
+}
+</script>
 
 </body>
 </html>
