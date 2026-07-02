@@ -6,6 +6,50 @@ const bcrypt = require("bcrypt");
 /* ===== LINE CLIENT ===== */
 const client = require("../config/line");
 
+/* =========================
+   ส่ง OTP ใหม่
+========================= */
+/* =========================
+   ส่ง OTP ใหม่
+========================= */
+async function sendNewOTP(phone, req) {
+
+  // สุ่ม OTP 6 หลัก
+  const otp = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  // เก็บ OTP ไว้ใน Session
+  req.session.resetOTP = otp;
+  req.session.resetPhone = phone;
+
+  // หา LINE User
+  const [rows] = await db.query(
+    "SELECT line_user_id FROM users WHERE phone=?",
+    [phone]
+  );
+
+  if (!rows.length || !rows[0].line_user_id) {
+    throw new Error("ไม่พบ LINE User");
+  }
+
+  // ส่ง OTP เข้า LINE
+  await client.pushMessage(rows[0].line_user_id, {
+    type: "text",
+    text:
+`🔐 รีเซ็ตรหัสผ่าน
+
+OTP ของคุณคือ
+
+${otp}
+
+หากกรอกผิด ระบบจะส่ง OTP ใหม่ให้อัตโนมัติ`
+  });
+
+  console.log("OTP :", otp);
+
+  return otp;
+}
 
 router.get("/", (req, res) => {
 
@@ -58,27 +102,17 @@ router.post("/", async (req, res) => {
 
     }
 
-    /* ===== สุ่ม OTP ===== */
-    const otp =
-      Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
+/* ===== ส่ง OTP ===== */
+await sendNewOTP(phone, req);
 
-    /* ===== เก็บ OTP ===== */
-    req.session.resetOTP = otp;
-    req.session.resetPhone = phone;
+return res.render("forgot-password", {
+  step: 2,
+  error: null,
+  success: "ส่ง OTP เข้า LINE แล้ว",
+  phone
+});
 
-    /* ===== ส่ง OTP เข้า LINE ===== */
-    await client.pushMessage(
-      user.line_user_id,
-      {
-        type: "text",
-        text:
-          `🔐 OTP รีเซ็ตรหัสผ่านของคุณคือ ${otp}`
-      }
-    );
-
-    console.log("OTP SENT:", otp);
+    //console.log("OTP SENT:", otp);
 
     /* ===== ไปหน้าใส่ OTP ===== */
     return res.render("forgot-password", {
@@ -119,45 +153,61 @@ router.post("/reset", async (req, res) => {
       confirmPassword
     } = req.body;
 
+    if (!req.session.resetOTP || !req.session.resetPhone) {
+
+  return res.render("forgot-password",{
+    step:1,
+    error:"OTP หมดอายุ กรุณาขอ OTP ใหม่",
+    success:null,
+    phone:null
+  });
+
+}
+
     /* ===== เช็ค OTP ===== */
-    if (otp !== req.session.resetOTP) {
+if (otp !== req.session.resetOTP) {
 
-      return res.render("forgot-password", {
-        step: 2,
-        error: "OTP ไม่ถูกต้อง",
-        success: null,
-        phone: req.session.resetPhone
-      });
+    await sendNewOTP(req.session.resetPhone, req);
 
-    }
+    return res.render("forgot-password",{
+        step:2,
+        error:"OTP ไม่ถูกต้อง ระบบได้ส่ง OTP ใหม่แล้ว",
+        success:null,
+        phone:req.session.resetPhone
+    });
+
+}
 
     /* ===== เช็ครหัสผ่าน ===== */
-    const regex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,20}$/;
+   const regex =
+/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,20}$/;
 
-    if (!regex.test(password)) {
+if (!regex.test(password)) {
 
-      return res.render("forgot-password", {
-        step: 2,
-        error:
-          "รหัสผ่านต้องมี A-Z a-z และตัวเลข 6-20 ตัว",
-        success: null,
-        phone: req.session.resetPhone
-      });
+    await sendNewOTP(req.session.resetPhone, req);
 
-    }
+    return res.render("forgot-password",{
+        step:2,
+        error:"รหัสผ่านต้องมี A-Z a-z ตัวเลข และยาว 8-20 ตัว ระบบได้ส่ง OTP ใหม่แล้ว",
+        success:null,
+        phone:req.session.resetPhone
+    });
+
+}
 
     /* ===== เช็ครหัสตรงกัน ===== */
-    if (password !== confirmPassword) {
+if (password !== confirmPassword) {
 
-      return res.render("forgot-password", {
-        step: 2,
-        error: "รหัสผ่านไม่ตรงกัน",
-        success: null,
-        phone: req.session.resetPhone
-      });
+    await sendNewOTP(req.session.resetPhone, req);
 
-    }
+    return res.render("forgot-password",{
+        step:2,
+        error:"รหัสผ่านไม่ตรงกัน ระบบได้ส่ง OTP ใหม่แล้ว",
+        success:null,
+        phone:req.session.resetPhone
+    });
+
+}
 
     /* ===== HASH PASSWORD ===== */
     const hashed =
@@ -173,8 +223,8 @@ router.post("/reset", async (req, res) => {
     );
 
     /* ===== ล้าง session ===== */
-    req.session.resetOTP = null;
-    req.session.resetPhone = null;
+delete req.session.resetOTP;
+delete req.session.resetPhone;
 
     return res.render("forgot-password", {
       step: 1,
