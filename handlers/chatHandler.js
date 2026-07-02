@@ -19,13 +19,14 @@ const handleCaseChat = async (event, userId, userStates, client) => {
   /* ===== TEXT ===== */
   if (event.message?.type === "text") {
     if (state.role === "volunteer") {
-      const fileName = `tts_${Date.now()}.mp3`;
-      const audioPath = await generateVoice(event.message.text, fileName);
-      const audioUrl = `${process.env.BASE_URL}${audioPath}`;
+      // ✅ แก้ตรงนี้
+      const fileName = `tts_${Date.now()}`;
+      const voice = await generateVoice(event.message.text, fileName);
+      const audioUrl = `${process.env.BASE_URL}${voice.url}`;
 
       await safePush(state.partnerId, [
         { type: "text", text: "👨‍⚕️ อาสา\n" + event.message.text },
-        { type: "audio", originalContentUrl: audioUrl, duration: 5000 }
+        { type: "audio", originalContentUrl: audioUrl, duration: voice.duration }
       ]);
       return { type: "text", text: "✅ ส่งข้อความและเสียงแล้ว" };
     }
@@ -36,6 +37,7 @@ const handleCaseChat = async (event, userId, userStates, client) => {
 
   /* ===== AUDIO ===== */
   if (event.message?.type === "audio") {
+    // ✅ แก้ตรงนี้ — รับไฟล์เสียงจาก LINE แล้วส่งต่อ
     const stream = await client.getMessageContent(event.message.id);
     const fileName = `${event.message.id}.m4a`;
     const filePath = path.join(process.cwd(), "public/audio", fileName);
@@ -46,11 +48,19 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       writable.on("error", reject);
     });
 
+    const audioUrl = `${process.env.BASE_URL}/audio/${fileName}`;
+
     await safePush(state.partnerId, {
       type: "audio",
-      originalContentUrl: `${process.env.BASE_URL}/audio/${fileName}`,
+      originalContentUrl: audioUrl,
       duration: event.message.duration || 10000
     });
+
+    // ✅ ลบไฟล์หลัง 10 วินาที
+    setTimeout(() => {
+      fs.unlink(filePath, () => console.log("🗑 ลบไฟล์เสียงแล้ว:", fileName));
+    }, 10000);
+
     return { type: "text", text: "✅ ส่งเสียงแล้ว" };
   }
 
