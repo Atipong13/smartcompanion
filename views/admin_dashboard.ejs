@@ -382,9 +382,7 @@ body{
 
       <div class="kpi-value">
 
-        <%= data.filter(
-          d=>d.status==='done'
-        ).length %>
+        <%= data.filter(d=>d.status==='completed').length %>
 
       </div>
 
@@ -416,10 +414,10 @@ body{
         statusText='กำลังดำเนินการ';
       }
 
-      if(row.status==='done'){
-        statusClass='done';
-        statusText='เสร็จสิ้น';
-      }
+      if(row.status==='completed'){
+    statusClass='done';
+    statusText='เสร็จสิ้น';
+  }
     %>
 
     <div class="card case-card">
