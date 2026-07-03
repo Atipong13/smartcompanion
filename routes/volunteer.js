@@ -173,7 +173,7 @@ router.get("/mycase", isVolunteer, async (req, res) => {
       ORDER BY hr.id DESC
     `, [req.session.user.id]);
 
-    res.render("mycase", { data: rows || [] });
+    res.render("volunteer_mycase", { data: rows || [] });
 
   } catch (err) {
     console.log(err);
@@ -321,7 +321,7 @@ ORDER BY c.id DESC
       return dateB - dateA;
     });
 
-    res.render("history", { data });
+    res.render("volunteer_history", { data });
 
   } catch (err) {
     console.error(err);
@@ -345,7 +345,7 @@ router.get("/edit-profile", isVolunteer, async (req, res) => {
     return res.redirect("/login");
   }
 
-  res.render("edit-profile", {
+  res.render("volunteer_editprofile", {
     user: rows[0],
     success: null,
     error: null
@@ -438,7 +438,7 @@ router.post("/edit-profile", isVolunteer, async (req, res) => {
     [volunteerId]
   );
 
-  res.render("edit-profile", {
+  res.render("volunteer_editprofile", {
     user: rows[0],
     success: "✅ บันทึกข้อมูลสำเร็จ",
     error: null

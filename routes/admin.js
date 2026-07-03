@@ -104,7 +104,7 @@ router.get("/edit-user/:id", isAdmin, async (req,res)=>{
     [id]
   );
 
-  res.render("edit_user",{ user:rows[0] });
+  res.render("admin_edituser",{ user:rows[0] });
 
 });
 router.post("/edit-user/:id", isAdmin, async (req,res)=>{
@@ -385,7 +385,7 @@ router.get("/reports", isAdmin, async (req, res) => {
       LIMIT 10
     `);
 
-    res.render("reports", {
+    res.render("admin_reports", {
 
       totalCases: total.total,
       workingCases: working.total,
@@ -440,7 +440,7 @@ e.name as elderly_name,             v.name as volunteer_name
       ORDER BY m.created_at ASC
     `,[id]);
 
-    res.render("report-detail",{
+    res.render("admin_reportdetail",{
       caseData: caseData[0],
       messages
     });

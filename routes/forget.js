@@ -53,7 +53,7 @@ ${otp}
 
 router.get("/", (req, res) => {
 
-  res.render("forgot-password", {
+  res.render("volunteer_forgotpassword", {
     step: 1,
     error: null,
     success: null,
@@ -79,7 +79,7 @@ router.post("/", async (req, res) => {
 
     if (!rows.length) {
 
-      return res.render("forgot-password", {
+      return res.render("volunteer_forgotpassword", {
         step: 1,
         error: "ไม่พบเบอร์โทรศัพท์นี้",
         success: null,
@@ -93,7 +93,7 @@ router.post("/", async (req, res) => {
     /* ===== เช็ค LINE ===== */
     if (!user.line_user_id) {
 
-      return res.render("forgot-password", {
+      return res.render("volunteer_forgotpassword", {
         step: 1,
         error: "บัญชีนี้ยังไม่ได้เชื่อม LINE",
         success: null,
@@ -105,7 +105,7 @@ router.post("/", async (req, res) => {
 /* ===== ส่ง OTP ===== */
 await sendNewOTP(phone, req);
 
-return res.render("forgot-password", {
+return res.render("volunteer_forgotpassword", {
   step: 2,
   error: null,
   success: "ส่ง OTP เข้า LINE แล้ว",
@@ -115,7 +115,7 @@ return res.render("forgot-password", {
     //console.log("OTP SENT:", otp);
 
     /* ===== ไปหน้าใส่ OTP ===== */
-    return res.render("forgot-password", {
+    return res.render("volunteer_forgotpassword", {
       step: 2,
       error: null,
       success: "ส่ง OTP เข้า LINE แล้ว",
@@ -129,7 +129,7 @@ return res.render("forgot-password", {
       err.response?.data || err
     );
 
-    return res.render("forgot-password", {
+    return res.render("volunteer_forgotpassword", {
       step: 1,
       error: "ส่ง OTP ไม่สำเร็จ",
       success: null,
@@ -155,7 +155,7 @@ router.post("/reset", async (req, res) => {
 
     if (!req.session.resetOTP || !req.session.resetPhone) {
 
-  return res.render("forgot-password",{
+  return res.render("volunteer_forgotpassword",{
     step:1,
     error:"OTP หมดอายุ กรุณาขอ OTP ใหม่",
     success:null,
@@ -169,7 +169,7 @@ if (otp !== req.session.resetOTP) {
 
     await sendNewOTP(req.session.resetPhone, req);
 
-    return res.render("forgot-password",{
+    return res.render("volunteer_forgotpassword",{
         step:2,
         error:"OTP ไม่ถูกต้อง ระบบได้ส่ง OTP ใหม่แล้ว",
         success:null,
@@ -186,7 +186,7 @@ if (!regex.test(password)) {
 
     await sendNewOTP(req.session.resetPhone, req);
 
-    return res.render("forgot-password",{
+    return res.render("volunteer_forgotpassword",{
         step:2,
         error:"รหัสผ่านต้องมี A-Z a-z ตัวเลข และยาว 8-20 ตัว ระบบได้ส่ง OTP ใหม่แล้ว",
         success:null,
@@ -200,7 +200,7 @@ if (password !== confirmPassword) {
 
     await sendNewOTP(req.session.resetPhone, req);
 
-    return res.render("forgot-password",{
+    return res.render("volunteer_forgotpassword",{
         step:2,
         error:"รหัสผ่านไม่ตรงกัน ระบบได้ส่ง OTP ใหม่แล้ว",
         success:null,
@@ -226,7 +226,7 @@ if (password !== confirmPassword) {
 delete req.session.resetOTP;
 delete req.session.resetPhone;
 
-    return res.render("forgot-password", {
+    return res.render("volunteer_forgotpassword", {
       step: 1,
       error: null,
       success: "รีเซ็ตรหัสผ่านสำเร็จ",
@@ -237,7 +237,7 @@ delete req.session.resetPhone;
 
     console.error(err);
 
-    return res.render("forgot-password", {
+    return res.render("volunteer_forgotpassword", {
       step: 1,
       error: "เกิดข้อผิดพลาด",
       success: null,
