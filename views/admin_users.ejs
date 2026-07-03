@@ -240,9 +240,49 @@ body{
 
 .details{
   margin-top:18px;
-  line-height:2;
-  color:#cbd5e1;
+  padding-top:16px;
+  border-top:1px solid rgba(255,255,255,.08);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
   font-size:14px;
+  color:#cbd5e1;
+}
+
+.details .row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.details .row .ico{
+  flex-shrink:0;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  background:rgba(255,255,255,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+}
+
+.details .row .val-label{
+  display:block;
+  color:#94a3b8;
+  font-size:11px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  margin-bottom:2px;
+}
+
+.details .row .val{
+  color:#e2e8f0;
+}
+
+.details .row .val.empty-val{
+  color:#64748b;
+  font-style:italic;
 }
 
 /* BUTTONS */
@@ -450,18 +490,47 @@ body{
 
         <div class="details">
 
-          📞 โทร:
-          <%= u.phone || '-' %>
+          <div class="row">
+            <div class="ico">📞</div>
+            <div>
+              <span class="val-label">โทร</span>
+              <span class="val <%= u.phone ? '' : 'empty-val' %>"><%= u.phone || '-' %></span>
+            </div>
+          </div>
 
-          <br>
+          <div class="row">
+            <div class="ico">📍</div>
+            <div>
+              <span class="val-label">พื้นที่</span>
+              <span class="val <%= u.area ? '' : 'empty-val' %>"><%= u.area || '-' %></span>
+            </div>
+          </div>
 
-          📍 พื้นที่:
-          <%= u.area || '-' %>
+          <div class="row">
+            <div class="ico">🎂</div>
+            <div>
+              <span class="val-label">อายุ</span>
+              <span class="val <%= u.age ? '' : 'empty-val' %>"><%= u.age || '-' %></span>
+            </div>
+          </div>
 
-          <br>
+          <% if(u.skill){ %>
+          <div class="row">
+            <div class="ico">🩺</div>
+            <div>
+              <span class="val-label">ความสามารถ</span>
+              <span class="val"><%= u.skill %></span>
+            </div>
+          </div>
+          <% } %>
 
-          🎂 อายุ:
-          <%= u.age || '-' %>
+          <div class="row">
+            <div class="ico">📝</div>
+            <div>
+              <span class="val-label">ประสบการณ์</span>
+              <span class="val <%= u.experience ? '' : 'empty-val' %>"><%= u.experience || '-' %></span>
+            </div>
+          </div>
 
         </div>
 
@@ -543,4 +612,3 @@ searchInput.addEventListener('keyup',()=>{
 
 </body>
 </html>
-```

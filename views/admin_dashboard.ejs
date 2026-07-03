@@ -61,6 +61,15 @@ body{
   transform:translateX(4px);
 }
 
+.sidebar a.urgent-link{
+  color:#fca5a5;
+}
+
+.sidebar a.urgent-link:hover{
+  background:#dc2626;
+  color:#fff;
+}
+
 /* MAIN */
 
 .main{
@@ -161,6 +170,15 @@ body{
   right:-40px;
 }
 
+.kpi-card.urgent-kpi{
+  background:linear-gradient(
+    135deg,
+    rgba(220,38,38,.95),
+    rgba(248,113,113,.7)
+  );
+  box-shadow:0 15px 40px rgba(220,38,38,.3);
+}
+
 .kpi-title{
   color:#dbeafe;
   font-size:14px;
@@ -191,7 +209,7 @@ body{
 
   border-radius:24px;
 
-  padding:25px;
+  padding:22px 25px;
 
   transition:.25s;
 
@@ -220,40 +238,234 @@ body{
   right:-70px;
 }
 
+/* URGENT CARD */
+
+.card.urgent-case{
+  border:1px solid rgba(248,113,113,.5);
+  box-shadow:0 0 0 1px rgba(220,38,38,.25), 0 15px 40px rgba(220,38,38,.18);
+}
+
 /* CARD TOP */
 
 .card-top{
   display:flex;
   justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  position:relative;
+  z-index:1;
+}
+
+.user-block{
+  display:flex;
   align-items:center;
-  margin-bottom:18px;
+  gap:10px;
+  min-width:0;
+}
+
+.user-avatar{
+  flex-shrink:0;
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+}
+
+.user-info{
+  min-width:0;
+}
+
+.user-label{
+  font-size:11px;
+  letter-spacing:.03em;
+  color:#94a3b8;
+  text-transform:uppercase;
+  margin-bottom:2px;
 }
 
 .user{
-  font-size:22px;
+  font-size:19px;
   font-weight:600;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.badges{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+  flex-shrink:0;
+}
+
+/* URGENT BADGE */
+
+.urgent-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+
+  padding:6px 14px;
+  border-radius:999px;
+
+  font-size:12px;
+  font-weight:600;
+  white-space:nowrap;
+
+  color:#fff;
+  background:#dc2626;
+
+  animation:pulse-urgent 1.6s infinite;
+}
+
+.urgent-badge.emergency{
+  background:#b91c1c;
+}
+
+@keyframes pulse-urgent{
+  0%{ box-shadow:0 0 0 0 rgba(220,38,38,.6); }
+  70%{ box-shadow:0 0 0 8px rgba(220,38,38,0); }
+  100%{ box-shadow:0 0 0 0 rgba(220,38,38,0); }
+}
+
+.urgent-reason{
+  margin-top:16px;
+  padding:12px 14px;
+
+  background:rgba(220,38,38,.12);
+  border:1px solid rgba(220,38,38,.3);
+  border-radius:14px;
+
+  font-size:13px;
+  color:#fecaca;
+  line-height:1.6;
+  position:relative;
+  z-index:1;
+}
+
+.urgent-reason b{
+  display:block;
+  font-size:11px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  color:#fca5a5;
+  margin-bottom:4px;
+}
+
+/* AI TRIGGER MESSAGE (ข้อความที่ AI ตรวจพบ) */
+
+.ai-msg-box{
+  margin-top:12px;
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+
+  padding:12px 14px;
+
+  background:rgba(220,38,38,.1);
+  border:1px solid rgba(220,38,38,.25);
+  border-radius:14px;
+
+  font-size:13px;
+  color:#fecaca;
+  line-height:1.6;
+  position:relative;
+  z-index:1;
+}
+
+.ai-msg-box .ico{
+  flex-shrink:0;
+  margin-top:1px;
+}
+
+.ai-msg-box .content{
+  min-width:0;
+}
+
+.ai-msg-box b{
+  display:block;
+  font-size:11px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  color:#fca5a5;
+  margin-bottom:4px;
+}
+
+/* DIVIDER */
+
+.card-divider{
+  height:1px;
+  background:rgba(255,255,255,.08);
+  margin:16px 0 14px;
+  position:relative;
+  z-index:1;
 }
 
 /* DETAILS */
 
 .details{
-  line-height:2;
-  color:#cbd5e1;
+  display:flex;
+  align-items:center;
+  gap:10px;
   font-size:14px;
+  color:#e2e8f0;
+  position:relative;
+  z-index:1;
+}
+
+.details .icon{
+  flex-shrink:0;
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:15px;
+}
+
+.details .text{
+  min-width:0;
 }
 
 .label{
+  display:block;
   color:#94a3b8;
+  font-size:11px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  margin-bottom:2px;
+}
+
+.volunteer-name{
+  font-weight:500;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.volunteer-name.unassigned{
+  color:#94a3b8;
+  font-weight:400;
+  font-style:italic;
 }
 
 /* STATUS */
 
 .badge{
   display:inline-block;
-  padding:8px 16px;
+  padding:7px 16px;
   border-radius:999px;
   font-size:12px;
   font-weight:600;
+  white-space:nowrap;
 }
 
 .waiting{
@@ -269,6 +481,42 @@ body{
 .done{
   background:#16a34a33;
   color:#4ade80;
+}
+
+/* FILTER TABS */
+
+.filter-tabs{
+  display:flex;
+  gap:12px;
+  margin-bottom:25px;
+  flex-wrap:wrap;
+}
+
+.filter-tab{
+  padding:12px 22px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.05);
+  color:#cbd5e1;
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.filter-tab:hover{
+  background:rgba(255,255,255,.1);
+}
+
+.filter-tab.active{
+  background:#2563eb;
+  border-color:#2563eb;
+  color:#fff;
+}
+
+.filter-tab.active.ai-tab{
+  background:#dc2626;
+  border-color:#dc2626;
 }
 
 /* EMPTY */
@@ -292,6 +540,39 @@ body{
 
 </style>
 </head>
+
+<%
+  /* =========================================================
+     HELPER: map สถานะของเคส (ใช้ร่วมกันทั้งเคสปกติและเคส AI)
+     ต้องประกาศนอก forEach ทั้งหมด เพื่อให้ทุก loop เรียกใช้ได้
+     help_requests ใช้: pending / accepted / completed
+     cases (AI)     ใช้: pending / accepted / done
+  ========================================================= */
+  var getCaseStatusInfo = function(status){
+    let statusClass = 'waiting';
+    let statusText = 'รอรับเคส';
+
+    if(status === 'accepted' || status === 'assigned' || status === 'in_progress'){
+      statusClass = 'working';
+      statusText = 'กำลังดำเนินการ';
+    }
+
+    if(status === 'completed' || status === 'done'){
+      statusClass = 'done';
+      statusText = 'เสร็จสิ้น';
+    }
+
+    return { statusClass, statusText };
+  };
+
+  /* =========================================================
+     HELPER: ดึงข้อความต้นทางที่ AI ใช้ตรวจพบความเสี่ยง
+     (เหมือนหน้ารายงาน) รองรับหลายชื่อ field เผื่อ schema ต่างกัน
+  ========================================================= */
+  var getTriggerMessage = function(item){
+    return item.trigger_message || item.original_message || item.message || null;
+  };
+%>
 
 <body>
 
@@ -342,6 +623,24 @@ body{
 
   </div>
 
+  <!-- FILTER TABS -->
+
+  <div class="filter-tabs" id="filterTabs">
+
+    <div class="filter-tab active" data-filter="all">
+      📋 ทั้งหมด
+    </div>
+
+    <div class="filter-tab" data-filter="normal">
+      🙋 เคสปกติ
+    </div>
+
+    <div class="filter-tab ai-tab" data-filter="ai">
+      🤖 เคสด่วน AI 
+    </div>
+
+  </div>
+
   <!-- KPI -->
 
   <div class="kpi-grid">
@@ -388,11 +687,25 @@ body{
 
     </div>
 
+    <div class="kpi-card urgent-kpi">
+
+      <div class="kpi-title">
+        🚨 เคสด่วน AI
+      </div>
+
+      <div class="kpi-value">
+
+        <%= highRiskCases || 0 %>
+
+      </div>
+
+    </div>
+
   </div>
 
   <!-- EMPTY -->
 
-  <% if(data.length === 0){ %>
+  <% if(data.length === 0 && (typeof highRiskList === 'undefined' || !highRiskList || highRiskList.length === 0)){ %>
 
     <div class="empty">
       ยังไม่มีเคสในระบบ
@@ -403,52 +716,172 @@ body{
   <!-- CARDS -->
 <div class="cards-grid" id="cardsGrid">
 
-  <% data.forEach(row=>{ %>
+  <%
+    /*
+      "highRiskList" คือแหล่งข้อมูลเคสด่วนที่ AI ตรวจพบจริง (เหมือนหน้ารายงาน)
+      สร้าง map ผูกกับ data ด้วย id เพื่อ mark เคสที่ตรงกันว่าเป็นเคสด่วน
+    */
+    const urgentList = typeof highRiskList !== 'undefined' && highRiskList ? highRiskList : [];
+    const urgentMap = {};
+    urgentList.forEach(u => { urgentMap[u.id] = u; });
+
+    /* เคสด่วนจาก AI จะถูกเรียงขึ้นก่อนเสมอ */
+    const sortedData = data.slice().sort((a,b)=>{
+      const aUrgent = urgentMap[a.id] ? 1 : 0;
+      const bUrgent = urgentMap[b.id] ? 1 : 0;
+      return bUrgent - aUrgent;
+    });
+  %>
+
+  <% sortedData.forEach(row=>{ %>
 
     <%
-      let statusClass='waiting';
-      let statusText='รอรับเคส';
-
-      if(row.status==='accepted'){
-        statusClass='working';
-        statusText='กำลังดำเนินการ';
-      }
-
-      if(row.status==='completed'){
-    statusClass='done';
-    statusText='เสร็จสิ้น';
-  }
+      const rowStatus = getCaseStatusInfo(row.status);
+      const urgentInfo = urgentMap[row.id];
+      const isEmergency = urgentInfo && urgentInfo.risk === 'emergency';
+      const triggerMsg = urgentInfo ? getTriggerMessage(urgentInfo) : null;
     %>
 
-    <div class="card case-card">
+    <div class="card case-card <%= urgentInfo ? 'urgent-case' : '' %>"
+         data-detail="<%= ((row.elderly_name||'') + ' ' + (row.volunteer_name||'')).toLowerCase() %>"
+         data-type="<%= urgentInfo ? 'ai' : 'normal' %>">
 
       <!-- TOP -->
       <div class="card-top">
 
-        <div class="user">
-  👵 <%= row.elderly_name || 'ไม่พบชื่อผู้สูงอายุ' %>
-</div>
+        <div class="user-block">
+          <div class="user-avatar">👵</div>
+          <div class="user-info">
+            <div class="user-label">ผู้สูงอายุ</div>
+            <div class="user"><%= row.elderly_name || 'ไม่พบชื่อผู้สูงอายุ' %></div>
+          </div>
+        </div>
 
-        <span class="badge <%= statusClass %>">
-          <%= statusText %>
-        </span>
+        <div class="badges">
+
+          <% if(urgentInfo){ %>
+            <span class="urgent-badge <%= isEmergency ? 'emergency' : '' %>">
+              <%= isEmergency ? '🆘 EMERGENCY' : '🚨 ด่วนจาก AI' %>
+            </span>
+          <% } %>
+
+          <span class="badge <%= rowStatus.statusClass %>">
+            <%= rowStatus.statusText %>
+          </span>
+
+        </div>
 
       </div>
+
+      <div class="card-divider"></div>
 
       <!-- ONLY VOLUNTEER -->
       <div class="details">
+        <div class="icon">🙋</div>
+        <div class="text">
+          <span class="label">อาสา</span>
+          <span class="volunteer-name <%= row.volunteer_name ? '' : 'unassigned' %>">
+            <%= row.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
+          </span>
+        </div>
+      </div>
 
-        <span class="label">
-          🙋 อาสา:
-        </span>
+      <!-- AI TRIGGER MESSAGE -->
+      <% if(urgentInfo && triggerMsg){ %>
+        <div class="ai-msg-box">
+          <span class="ico">💬</span>
+          <div class="content">
+            <b>ข้อความที่ AI ตรวจพบ</b>
+            <%= triggerMsg %>
+          </div>
+        </div>
+      <% } %>
 
-        <br>
+      <!-- AI URGENT REASON -->
+      <% if(urgentInfo && (urgentInfo.reason || urgentInfo.urgent_reason)){ %>
+        <div class="urgent-reason">
+          <b>🤖 เหตุผลจาก AI</b>
+          <%= urgentInfo.reason || urgentInfo.urgent_reason %>
+        </div>
+      <% } %>
 
-        <strong>
-          <%= row.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
-        </strong>
+    </div>
+
+  <% }) %>
+
+  <%
+    /* เคสด่วนบางเคสอาจไม่อยู่ใน "data" ปกติ (เช่นยังไม่ถูกรับ) — แสดงเพิ่มจาก highRiskList */
+    const dataIds = new Set(data.map(d => d.id));
+    const urgentOnly = urgentList.filter(u => !dataIds.has(u.id));
+  %>
+
+  <% urgentOnly.forEach(item=>{ %>
+
+    <%
+      const isEmergency = item.risk === 'emergency';
+      const caseStatus = getCaseStatusInfo(item.status);
+      const triggerMsg = getTriggerMessage(item);
+    %>
+
+    <div class="card case-card urgent-case"
+         data-detail="<%= ((item.elderly_name||item.name||'') + ' ' + (item.volunteer_name||'')).toLowerCase() %>"
+         data-type="ai">
+
+      <div class="card-top">
+
+        <div class="user-block">
+          <div class="user-avatar">👵</div>
+          <div class="user-info">
+            <div class="user-label">ผู้สูงอายุ</div>
+            <div class="user"><%= item.elderly_name || item.name || 'ไม่พบชื่อผู้สูงอายุ' %>
+              
+            </div>
+            
+          </div>
+        </div>
+
+        <div class="badges">
+          <span class="urgent-badge <%= isEmergency ? 'emergency' : '' %>">
+            <%= isEmergency ? '🆘 EMERGENCY' : '🚨 ด่วนจาก AI' %>
+          </span>
+
+          <span class="badge <%= caseStatus.statusClass %>">
+            <%= caseStatus.statusText %>
+          </span>
+        </div>
 
       </div>
+
+      <div class="card-divider"></div>
+
+      <div class="details">
+        <div class="icon">🙋</div>
+        <div class="text">
+          <span class="label">อาสา</span>
+          <span class="volunteer-name <%= item.volunteer_name ? '' : 'unassigned' %>">
+            <%= item.volunteer_name || 'ยังไม่มีอาสารับเคส' %>
+          </span>
+        </div>
+      </div>
+
+      <!-- AI TRIGGER MESSAGE -->
+      <% if(triggerMsg){ %>
+        <div class="ai-msg-box">
+          <span class="ico">💬</span>
+          <div class="content">
+            <b>ข้อความที่ AI ตรวจพบ</b>
+            <%= triggerMsg %>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- AI URGENT REASON -->
+      <% if(item.reason || item.urgent_reason){ %>
+        <div class="urgent-reason">
+          <b>🤖 เหตุผลจาก AI</b>
+          <%= item.reason || item.urgent_reason %>
+        </div>
+      <% } %>
 
     </div>
 
@@ -460,7 +893,7 @@ body{
 
 <script>
 
-/* SEARCH */
+/* SEARCH + FILTER TABS */
 
 const searchInput =
 document.getElementById('searchInput');
@@ -468,25 +901,45 @@ document.getElementById('searchInput');
 const cards =
 document.querySelectorAll('.case-card');
 
-searchInput.addEventListener('keyup',()=>{
+const filterTabs =
+document.querySelectorAll('.filter-tab');
 
-  const keyword =
-  searchInput.value.toLowerCase();
+let currentFilter = 'all';
+
+function applyFilters(){
+
+  const keyword = searchInput.value.toLowerCase();
 
   cards.forEach(card=>{
 
-    const detail =
-    card.dataset.detail;
+    const detail = card.dataset.detail;
+    const type = card.dataset.type;
 
-    if(detail.includes(keyword)){
+    const matchesSearch = detail.includes(keyword);
+    const matchesFilter = (currentFilter === 'all') || (type === currentFilter);
 
+    if(matchesSearch && matchesFilter){
       card.style.display='block';
-
     }else{
-
       card.style.display='none';
-
     }
+
+  });
+
+}
+
+searchInput.addEventListener('keyup', applyFilters);
+
+filterTabs.forEach(tab=>{
+
+  tab.addEventListener('click', ()=>{
+
+    filterTabs.forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+
+    currentFilter = tab.dataset.filter;
+
+    applyFilters();
 
   });
 

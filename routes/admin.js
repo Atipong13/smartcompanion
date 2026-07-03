@@ -31,36 +31,50 @@ function isAdmin(req,res,next){
    DASHBOARD (/admin)
 ========================= */
 router.get("/", isAdmin, async (req, res) => {
-
   try {
-
- const sql = `
-  SELECT
-    h.*,
-
-    elderly.name AS elderly_name,
-    volunteer.name AS volunteer_name
-
-  FROM help_requests h
-
-  LEFT JOIN users elderly
-  ON h.elder_id = elderly.id
-
-  LEFT JOIN users volunteer
-  ON h.volunteer_id = volunteer.id
-
-  ORDER BY h.id DESC
-`;
-
+    const sql = `
+      SELECT
+        h.*,
+        elderly.name AS elderly_name,
+        volunteer.name AS volunteer_name
+      FROM help_requests h
+      LEFT JOIN users elderly ON h.elder_id = elderly.id
+      LEFT JOIN users volunteer ON h.volunteer_id = volunteer.id
+      ORDER BY h.id DESC
+    `;
     const [rows] = await db.query(sql);
 
-    res.render("admin_dashboard", { data: rows });
+    // ✅ นับเคสด่วนจาก AI (ตาราง cases)
+    const [[highRiskRow]] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM cases
+      WHERE risk IN ('high','emergency')
+    `);
+
+    // ✅ (ถ้าหน้า dashboard ต้องแสดงรายการเคสด่วนด้วย ไม่ใช่แค่ตัวเลข)
+    const [highRiskList] = await db.query(`
+      SELECT
+        c.*,
+        e.name AS elderly_name,
+        v.name AS volunteer_name
+      FROM cases c
+      LEFT JOIN users e ON c.line_user_id = e.line_user_id
+      LEFT JOIN users v ON c.volunteer_id = v.id
+      WHERE c.risk IN ('high','emergency')
+      ORDER BY c.created_at DESC
+      LIMIT 10
+    `);
+
+    res.render("admin_dashboard", {
+      data: rows,
+      highRiskCases: highRiskRow.total,
+      highRiskList
+    });
 
   } catch (err) {
     console.log(err);
     res.send("DB ERROR");
   }
-
 });
 /* =========================
    USERS LIST
@@ -342,10 +356,13 @@ router.get("/reports", isAdmin, async (req, res) => {
     const [highRiskList] = await db.query(`
       SELECT
         m.*,
-        u.name AS elderly_name
+        u.name AS elderly_name,
+        v.name AS volunteer_name
       FROM cases m
       LEFT JOIN users u
       ON m.line_user_id = u.line_user_id
+      LEFT JOIN users v
+      ON m.volunteer_id = v.id
       ${highRiskWhere}
       ORDER BY m.created_at DESC
       LIMIT 10
@@ -481,7 +498,7 @@ router.get("/case-report/:id", isAdmin, async (req, res) => {
    /admin/export/excel
 ========================= */
 router.get("/export/excel", isAdmin, async (req, res) => {
-  const [rows] = await db.query(`
+  const [normalRows] = await db.query(`
     SELECT h.id, e.name AS elder_name,
            v.name AS volunteer_name,
            h.detail, h.status, h.created_at
@@ -491,11 +508,30 @@ router.get("/export/excel", isAdmin, async (req, res) => {
     ORDER BY h.id DESC
   `);
 
+  normalRows.forEach(r => { r.type = "เคสปกติ"; });
+
+  const [urgentRows] = await db.query(`
+    SELECT c.id, e.name AS elder_name,
+           v.name AS volunteer_name,
+           c.message AS detail, c.status, c.created_at
+    FROM cases c
+    LEFT JOIN users e ON c.line_user_id = e.line_user_id
+    LEFT JOIN users v ON c.volunteer_id = v.id
+    ORDER BY c.id DESC
+  `);
+
+  urgentRows.forEach(r => { r.type = "เคสด่วน (AI)"; });
+
+  const rows = [...normalRows, ...urgentRows].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
+
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Report");
 
   worksheet.columns = [
     { header: "ID", key: "id" },
+    { header: "ประเภท", key: "type" },
     { header: "ผู้สูงอายุ", key: "elder_name" },
     { header: "อาสา", key: "volunteer_name" },
     { header: "รายละเอียด", key: "detail" },
@@ -525,7 +561,7 @@ router.get("/export/excel", isAdmin, async (req, res) => {
 ========================= */
 router.get("/export/pdf", isAdmin, async (req, res) => {
   try {
-    const [rows] = await db.query(`
+    const [normalRows] = await db.query(`
       SELECT h.id, e.name AS elder_name,
              v.name AS volunteer_name,
              h.detail, h.status, h.created_at
@@ -534,6 +570,24 @@ router.get("/export/pdf", isAdmin, async (req, res) => {
       LEFT JOIN users v ON h.volunteer_id = v.id
       ORDER BY h.id DESC
     `);
+
+    normalRows.forEach(r => { r.type = "ปกติ"; });
+
+    const [urgentRows] = await db.query(`
+      SELECT c.id, e.name AS elder_name,
+             v.name AS volunteer_name,
+             c.message AS detail, c.status, c.created_at
+      FROM cases c
+      LEFT JOIN users e ON c.line_user_id = e.line_user_id
+      LEFT JOIN users v ON c.volunteer_id = v.id
+      ORDER BY c.id DESC
+    `);
+
+    urgentRows.forEach(r => { r.type = "AI ด่วน"; });
+
+    const rows = [...normalRows, ...urgentRows].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
 
     const doc = new PDFDocument({ margin: 30, size: "A4" });
 
@@ -554,7 +608,7 @@ router.get("/export/pdf", isAdmin, async (req, res) => {
 
     /* ===== TABLE HEADER ===== */
     doc.fontSize(10).text(
-      "ID | Elder | Volunteer | Detail | Status | Date"
+      "ID | Type | Elder | Volunteer | Detail | Status | Date"
     );
 
     doc.moveTo(30, doc.y).lineTo(580, doc.y).stroke();
@@ -564,11 +618,12 @@ router.get("/export/pdf", isAdmin, async (req, res) => {
     rows.forEach((r, i) => {
       const line =
         `${r.id} | ` +
+        `${r.type} | ` +
         `${r.elder_name || "-"} | ` +
         `${r.volunteer_name || "-"} | ` +
         `${(r.detail || "").substring(0, 20)} | ` +
         `${r.status} | ` +
-        `${new Date(r.created_at).toLocaleDateString("th-TH")}`;
+        `${r.created_at ? new Date(r.created_at).toLocaleDateString("th-TH") : "-"}`;
 
       doc.fontSize(9).text(line);
       doc.moveDown(0.3);
