@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
+const { sign, verify } = require("../utils/regToken");
 
 
 /* =========================
@@ -185,10 +186,31 @@ router.post("/login", async (req, res) => {
     /* =========================
        LOGIN SUCCESS
     ========================= */
-    req.session.user = user;
-    req.session.user_id = user.id;
-    req.session.role = user.role;
+const safeUser = {
+  id: user.id,
+  name: user.name,
+  phone: user.phone,
+  role: user.role,
+  status: user.status,
+  line_user_id: user.line_user_id
+};
 
+req.session.regenerate((err) => {
+  if (err) {
+    req.session.error = "ระบบผิดพลาด";
+    return res.redirect("/login");
+  }
+
+  req.session.user = safeUser;
+  req.session.user_id = user.id;
+  req.session.role = user.role;
+
+  if (user.role === "admin") return res.redirect("/admin");
+  if (user.role === "volunteer") return res.redirect("/volunteer");
+  if (user.role === "elder") return res.redirect("/elder");
+  return res.redirect("/login");
+});
+return; 
     console.log("LOGIN:", user.id, user.role);
 
     if (user.role === "admin")
@@ -228,25 +250,26 @@ router.get("/logout",(req,res)=>{
 ========================= */
 router.get("/volunteer/register", (req, res) => {
   const lineid = req.query.uid || null;
+  const token  = req.query.token || null;
   const success = req.query.success ? "สมัครสำเร็จ รออนุมัติ" : null;
-
   const user = req.session.user || null;
 
-  res.render("volunteer_register", {
-    lineid,
-    success,
-    user
-  });
+  res.render("volunteer_register", { lineid, token, success, user });
 });
 /* =========================
    VOLUNTEER REGISTER PROCESS
 ========================= */
 router.post("/volunteer/register", async (req, res) => {
+  const { name, phone, password, confirm, lineid, area, age, skill, experience, token } = req.body;
 
-const { name, phone, password, confirm, lineid, area, age, skill, experience } = req.body;
   if (!name || !phone || !password || !confirm || !lineid || !age) {
-  return res.send("ข้อมูลไม่ครบ");
-}
+    return res.send("ข้อมูลไม่ครบ");
+  }
+
+  // ✅ ป้องกันไม่ให้แก้ข้อมูล/รหัสผ่านของ line_user_id คนอื่น
+  if (!verify(lineid, token)) {
+    return res.send("ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณากดสมัครใหม่จาก LINE อีกครั้ง");
+  }
 if (!area || !skill || !experience) {
   return res.send("ข้อมูลไม่ครบ");
 }

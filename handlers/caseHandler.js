@@ -7,6 +7,12 @@ const handleCasePostback = async (event, user, client, userStates) => {
 
   /* ================= รับเคส ================= */
   if (data.startsWith("accept_case_")) {
+
+    // ✅ ต้องเป็นอาสาที่ได้รับอนุมัติแล้วเท่านั้น ถึงจะรับเคสได้
+    if (user.role !== "volunteer" || user.status !== "approved") {
+      return { type: "text", text: "❌ คุณไม่มีสิทธิ์รับเคสนี้" };
+    }
+
     const caseId = data.replace("accept_case_", "");
 
     const [activeCase] = await db.query(
@@ -103,14 +109,19 @@ const handleCasePostback = async (event, user, client, userStates) => {
     const caseId = data.replace("chat_case_", "");
 
     const [caseData] = await db.query(
-      "SELECT line_user_id, message FROM cases WHERE id=?",
+      "SELECT line_user_id, message, volunteer_id FROM cases WHERE id=?",
       [caseId]
     );
     if (!caseData.length) return { type: "text", text: "❌ ไม่พบเคสนี้" };
 
+    // ✅ ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะเปิดแชทได้
+    if (String(caseData[0].volunteer_id) !== String(user.id)) {
+      return { type: "text", text: "❌ คุณไม่มีสิทธิ์เปิดแชทเคสนี้" };
+    }
+
     const elderLineId = caseData[0].line_user_id;
 
-    // ✅ เพิ่ม: หา users.id ของผู้สูงอายุ (user.id ของอาสามีอยู่แล้วใน `user` object)
+    // ✅ หา users.id ของผู้สูงอายุ (user.id ของอาสามีอยู่แล้วใน `user` object)
     const [elderUser] = await db.query(
       "SELECT id FROM users WHERE line_user_id=?",
       [elderLineId]
@@ -150,12 +161,25 @@ const handleCasePostback = async (event, user, client, userStates) => {
   if (data.startsWith("finish_case_")) {
     const caseId = data.replace("finish_case_", "");
 
-    const [caseData] = await db.query("SELECT line_user_id FROM cases WHERE id=?", [caseId]);
+    const [caseData] = await db.query("SELECT line_user_id, status, volunteer_id FROM cases WHERE id=?", [caseId]);
     if (!caseData.length) return { type: "text", text: "❌ ไม่พบเคสนี้" };
+
+    // ✅ ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะจบเคสได้
+    if (String(caseData[0].volunteer_id) !== String(user.id)) {
+      return { type: "text", text: "❌ คุณไม่มีสิทธิ์จบเคสนี้" };
+    }
+
+    if (caseData[0].status === "done") {
+      return { type: "text", text: "⚠️ เคสนี้ถูกจบไปแล้ว" };
+    }
 
     const elderLineId = caseData[0].line_user_id;
 
-    await db.query("UPDATE cases SET status='done' WHERE id=?", [caseId]);
+    // ✅ ผูก volunteer_id ในเงื่อนไข UPDATE ด้วย กันจบเคสซ้อนจากอาสาคนอื่น
+    await db.query(
+      "UPDATE cases SET status='done' WHERE id=? AND volunteer_id=?",
+      [caseId, user.id]
+    );
     await client.pushMessage(elderLineId, {
       type: "text",
       text: "✅ อาสาได้จบเคสแล้ว\nขอบคุณที่ใช้บริการ SmartCompanion 👋"

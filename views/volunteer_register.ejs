@@ -456,6 +456,11 @@ button:hover{
   name="lineid"
   value="<%= user ? user.lineid : (typeof lineid !== 'undefined' ? lineid : '') %>"
 >
+<input
+  type="hidden"
+  name="token"
+  value="<%= typeof token !== 'undefined' ? token : '' %>"
+>
 
 <div class="grid">
 <div>

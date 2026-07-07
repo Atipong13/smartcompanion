@@ -367,7 +367,14 @@ const handleAudio = async (event, user) => {
       const data = event.postback.data;
 
       console.log("POSTBACK:", data); // debug
+
 if (data.startsWith("accept_")) {
+
+  // ✅ ต้องเป็นอาสาที่ได้รับการอนุมัติแล้วเท่านั้น ถึงจะรับเคสได้
+  if (user.role !== "volunteer" || user.status !== "approved") {
+    return { type: "text", text: "❌ คุณไม่มีสิทธิ์รับเคสนี้" };
+  }
+
   const caseId = data.split("_")[1];
 
   if (!caseId) {
@@ -497,15 +504,16 @@ if (data.startsWith("request_location_")) {
     return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
   }
 
+  // ✅ ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะขอพิกัดได้
   const [caseData] = await db.query(
-    "SELECT elder_id, latitude, longitude FROM help_requests WHERE id=?",
-    [caseId]
+    "SELECT elder_id, latitude, longitude FROM help_requests WHERE id=? AND volunteer_id=?",
+    [caseId, user.id]
   );
 
   console.log("caseData:", caseData); 
 
   if (!caseData.length) {
-    return { type: "text", text: "❌ ไม่พบข้อมูลเคส" };
+    return { type: "text", text: "❌ ไม่พบข้อมูลเคส หรือคุณไม่ใช่อาสาที่รับเคสนี้" };
   }
 
   const [elder] = await db.query(
@@ -559,43 +567,36 @@ if (data.startsWith("request_location_")) {
     return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
   }
 
-  //  เช็คว่าเคสนี้ยังเปิดอยู่ไหม
+  //  ✅ เช็คว่าเคสนี้ยังเปิดอยู่ไหม และเป็นอาสาที่รับเคสนี้จริง
   const [check] = await db.query(
-    "SELECT id, status FROM help_requests WHERE id=?",
-    [caseId]
+    "SELECT id, status, elder_id FROM help_requests WHERE id=? AND volunteer_id=?",
+    [caseId, user.id]
   );
 
   if (!check.length) {
-    return { type: "text", text: "❌ ไม่พบเคสนี้" };
+    return { type: "text", text: "❌ ไม่พบเคสนี้ หรือคุณไม่ใช่อาสาที่รับเคสนี้" };
   }
 
   if (check[0].status === "completed") {
     return { type: "text", text: "⚠️ เคสนี้ถูกจบไปแล้ว" };
   }
 
-  //  จบเคส
+  //  จบเคส (ผูก volunteer_id ด้วยกันปิดเคสของคนอื่นซ้ำ)
   await db.query(
-    "UPDATE help_requests SET status='completed', completed_at=NOW() WHERE id=?",
-    [caseId]
+    "UPDATE help_requests SET status='completed', completed_at=NOW() WHERE id=? AND volunteer_id=?",
+    [caseId, user.id]
   );
 
-  const [caseData] = await db.query(
-    "SELECT elder_id FROM help_requests WHERE id=?",
-    [caseId]
+  const [elder] = await db.query(
+    "SELECT line_user_id FROM users WHERE id=?",
+    [check[0].elder_id]
   );
 
-  if (caseData.length) {
-    const [elder] = await db.query(
-      "SELECT line_user_id FROM users WHERE id=?",
-      [caseData[0].elder_id]
-    );
-
-    if (elder.length) {
-      await safePush(elder[0].line_user_id, {
-        type: "text",
-        text: "🎉 เคสเสร็จเรียบร้อย ขอบคุณที่ใช้บริการ 🙏"
-      });
-    }
+  if (elder.length) {
+    await safePush(elder[0].line_user_id, {
+      type: "text",
+      text: "🎉 เคสเสร็จเรียบร้อย ขอบคุณที่ใช้บริการ 🙏"
+    });
   }
 
   return { type: "text", text: "✅ ปิดเคสเรียบร้อยแล้ว" };

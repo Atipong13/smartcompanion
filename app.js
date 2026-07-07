@@ -6,7 +6,7 @@ const session     = require("express-session");
 const path        = require("path");
 const fs          = require("fs");
 const cron        = require("node-cron");
-
+const { sign } = require("./utils/regToken");
 const db            = require("./config/db");
 const helpRoute     = require("./routes/help");
 const activityRoute = require("./routes/activity");
@@ -60,22 +60,7 @@ const config = {
 const client = new line.Client(config);
 initPush(client); // ✅ ส่ง client ให้ safePush ใช้
 
-const ELDER_MENU_ID     = "richmenu-d003829b8b0e855887e6b0d16d13b01e";
-const VOLUNTEER_MENU_ID = "richmenu-4c00a8ef07910382924ce46b4b1f2d77";
 
-async function syncRichMenu(userId) {
-  try {
-    const [users] = await db.query("SELECT role, status FROM users WHERE line_user_id=?", [userId]);
-    if (!users.length) return;
-    const { role, status } = users[0];
-    const menuId = role === "volunteer" && status === "approved" ? VOLUNTEER_MENU_ID : ELDER_MENU_ID;
-    try { await client.unlinkRichMenuFromUser(userId); } catch (e) {}
-    await client.linkRichMenuToUser(userId, menuId);
-    console.log(`✅ Rich Menu: role=${role}, status=${status} → ${menuId}`);
-  } catch (err) {
-    console.log("❌ syncRichMenu error:", err.response?.data || err.message);
-  }
-}
 
 /* ================= CRON ================= */
 let cronRunning = false;
@@ -183,13 +168,13 @@ async function handleEvent(event) {
       [userId, name ?? userId]
     );
     user = { id: result.insertId, line_user_id: userId, role: "elder", status: "approved" };
-  } else {
-    // user เก่า อัปเดตชื่อเฉพาะเมื่อดึงชื่อได้สำเร็จ
-    if (name) {
-      await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
-    }
-    user = users[0];
+} else {
+  // ✅ อัปเดตชื่อจาก LINE เฉพาะกรณีที่ user ยังไม่เคยตั้งชื่อเอง (ชื่อว่าง หรือเป็น userId เดิม)
+  if (name && (!users[0].name || users[0].name === userId)) {
+    await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
   }
+  user = users[0];
+}
 
   // follow
   if (event.type === "follow") {
@@ -252,8 +237,9 @@ async function handleEvent(event) {
 
       if (msg === "สมัครอาสา") {
         await db.query("UPDATE users SET role='volunteer', status='pending' WHERE line_user_id=?", [userId]);
-        const registerUrl = process.env.BASE_URL.trim() + "/volunteer/register?uid=" + userId;
-        const imageUrl    = process.env.BASE_URL.trim() + "/images/smart.jpg";
+const regToken = sign(userId);
+const registerUrl = process.env.BASE_URL.trim() +
+  "/volunteer/register?uid=" + userId + "&token=" + regToken;        const imageUrl    = process.env.BASE_URL.trim() + "/images/smart.jpg";
         return client.replyMessage(event.replyToken, {
           type: "flex", altText: "สมัครเป็นอาสา SmartCompanion",
           contents: {
@@ -316,7 +302,21 @@ async function handleHistory(event, user, client) {
     return { text: "🟢 ความเสี่ยงต่ำ", color: "#27ae60" };
   };
 
+  // ✅ ประกาศจุดเดียว นอกทุก if — ใช้ร่วมกันได้ทั้ง volunteer และ elder
+  const statusLabel = (s) => {
+    const map = {
+      waiting:   "รอดำเนินการ",
+      open:      "รอดำเนินการ",
+      accepted:  "กำลังดำเนินการ",
+      completed: "เสร็จสิ้น",
+      done:      "เสร็จสิ้น",
+      cancelled: "ยกเลิก"
+    };
+    return map[s] || s;
+  };
+
   if (user.role === "volunteer") {
+
     const [helps] = await db.query(
       `SELECT h.status, h.created_at, u.name AS elder_name
        FROM help_requests h
@@ -334,7 +334,7 @@ async function handleHistory(event, user, client) {
     const helpBox = helps.length
       ? helps.map(h => ({ type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
           { type: "text", text: "👵 " + (h.elder_name || "-"), size: "sm", weight: "bold", wrap: true },
-          { type: "text", text: h.status, size: "xs", color: statusColor(h.status) },
+          { type: "text", text: statusLabel(h.status), size: "xs", color: statusColor(h.status) },
           { type: "text", text: formatDate(h.created_at), size: "xs", color: "#888888" }
         ]}))
       : [{ type: "text", text: "ไม่มีคำขอช่วยเหลือ", size: "sm", color: "#999999" }];
@@ -353,7 +353,7 @@ async function handleHistory(event, user, client) {
           return { type: "box", layout: "vertical", margin: "sm", spacing: "xs", contents: [
             { type: "text", text: "🤖 " + (c.message || "-"), size: "sm", weight: "bold", wrap: true },
             { type: "text", text: r.text, size: "xs", color: r.color },
-            { type: "text", text: c.status, size: "xs", color: statusColor(c.status) },
+            { type: "text", text: statusLabel(c.status), size: "xs", color: statusColor(c.status) },
             { type: "text", text: formatDate(c.created_at), size: "xs", color: "#888888" }
           ]};
         })
@@ -392,11 +392,11 @@ async function handleHistory(event, user, client) {
 
   const helpBoxes = mkBox(helps, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
     { type: "text", text: "🙋‍♂️ " + (i.volunteer_name || "ยังไม่มีอาสารับเคส"), size: "md", wrap: true },
-    { type: "text", text: i.status + " • " + formatDate(i.created_at), size: "sm", color: statusColor(i.status) }
+    { type: "text", text: statusLabel(i.status) + " • " + formatDate(i.created_at), size: "sm", color: statusColor(i.status) }
   ]}));
   const actBoxes = mkBox(activities, "ไม่มีข้อมูล", i => ({ type: "box", layout: "vertical", margin: "md", contents: [
     { type: "text", text: "📅 " + safeText(i.title), size: "md", wrap: true },
-    { type: "text", text: i.status + " • " + formatDate(i.activity_time), size: "sm", color: statusColor(i.status) }
+    { type: "text", text: statusLabel(i.status) + " • " + formatDate(i.activity_time), size: "sm", color: statusColor(i.status) }
   ]}));
   const chatBoxes = mkBox(chats, "ไม่มีแชท", c => ({ type: "box", layout: "vertical", margin: "md", contents: [
     { type: "text", text: (c.sender_id == user.id ? "คุณ: " : "อาสา: ") + safeText(c.message), size: "md", wrap: true },
@@ -406,7 +406,7 @@ async function handleHistory(event, user, client) {
     const r = riskLabel(i.risk);
     return { type: "box", layout: "vertical", margin: "md", contents: [
       { type: "text", text: "🤖 " + safeText(i.message), size: "md", wrap: true },
-      { type: "text", text: r.text + " • " + formatDate(i.created_at), size: "sm", color: r.color }
+      { type: "text", text: r.text + " • " + statusLabel(i.status) + " • " + formatDate(i.created_at), size: "sm", color: r.color }
     ]};
   });
 
@@ -428,12 +428,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use("/images", express.static("images"));
-app.use(session({ secret: "smartcompanion", resave: false, saveUninitialized: false, cookie: { secure: false } }));
+app.set("trust proxy", 1); 
 
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production", // https เท่านั้นตอน production
+    httpOnly: true,
+    sameSite: "lax"
+  }
+}));
 app.use("/", require("./routes/auth"));
 app.use("/admin", require("./routes/admin"));
 app.use("/volunteer", require("./routes/volunteer"));
-app.use("/elder", require("./routes/elder"));
 app.use("/activity", activityRoute);
 app.use("/forgot-password", forgetRoutes);
 

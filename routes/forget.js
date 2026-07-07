@@ -9,9 +9,6 @@ const client = require("../config/line");
 /* =========================
    ส่ง OTP ใหม่
 ========================= */
-/* =========================
-   ส่ง OTP ใหม่
-========================= */
 async function sendNewOTP(phone, req) {
 
   // สุ่ม OTP 6 หลัก
@@ -22,6 +19,8 @@ async function sendNewOTP(phone, req) {
   // เก็บ OTP ไว้ใน Session
   req.session.resetOTP = otp;
   req.session.resetPhone = phone;
+  req.session.otpCreatedAt = Date.now();
+  req.session.otpAttempts = 0;
 
   // หา LINE User
   const [rows] = await db.query(
@@ -37,13 +36,13 @@ async function sendNewOTP(phone, req) {
   await client.pushMessage(rows[0].line_user_id, {
     type: "text",
     text:
-`🔐 รีเซ็ตรหัสผ่าน
+      `🔐 รีเซ็ตรหัสผ่าน
 
 OTP ของคุณคือ
 
 ${otp}
 
-หากกรอกผิด ระบบจะส่ง OTP ใหม่ให้อัตโนมัติ`
+หากกรอกผิดเกิน 5 ครั้ง ระบบจะให้ส่งขอ OTP ใหม่`
   });
 
   console.log("OTP :", otp);
@@ -102,15 +101,15 @@ router.post("/", async (req, res) => {
 
     }
 
-/* ===== ส่ง OTP ===== */
-await sendNewOTP(phone, req);
+    /* ===== ส่ง OTP ===== */
+    await sendNewOTP(phone, req);
 
-return res.render("volunteer_forgotpassword", {
-  step: 2,
-  error: null,
-  success: "ส่ง OTP เข้า LINE แล้ว",
-  phone
-});
+    return res.render("volunteer_forgotpassword", {
+      step: 2,
+      error: null,
+      success: "ส่ง OTP เข้า LINE แล้ว",
+      phone
+    });
 
     //console.log("OTP SENT:", otp);
 
@@ -153,61 +152,72 @@ router.post("/reset", async (req, res) => {
       confirmPassword
     } = req.body;
 
-    if (!req.session.resetOTP || !req.session.resetPhone) {
-
+if (!req.session.resetOTP || !req.session.resetPhone) {
   return res.render("volunteer_forgotpassword",{
-    step:1,
-    error:"OTP หมดอายุ กรุณาขอ OTP ใหม่",
-    success:null,
-    phone:null
+    step:1, error:"OTP หมดอายุ กรุณาขอ OTP ใหม่", success:null, phone:null
   });
-
 }
 
-    /* ===== เช็ค OTP ===== */
+// OTP มีอายุ 5 นาที
+const OTP_TTL_MS = 5 * 60 * 1000;
+if (Date.now() - (req.session.otpCreatedAt || 0) > OTP_TTL_MS) {
+  delete req.session.resetOTP;
+  delete req.session.resetPhone;
+  return res.render("volunteer_forgotpassword",{
+    step:1, error:"OTP หมดอายุ กรุณาขอ OTP ใหม่", success:null, phone:null
+  });
+}
+
 if (otp !== req.session.resetOTP) {
+  req.session.otpAttempts = (req.session.otpAttempts || 0) + 1;
 
-    await sendNewOTP(req.session.resetPhone, req);
-
+  // กรอกผิดเกิน 5 ครั้ง → บังคับขอ OTP ใหม่ ไม่ auto-ส่งให้ทันที (กัน spam LINE)
+  if (req.session.otpAttempts >= 5) {
+    delete req.session.resetOTP;
+    delete req.session.resetPhone;
     return res.render("volunteer_forgotpassword",{
-        step:2,
-        error:"OTP ไม่ถูกต้อง ระบบได้ส่ง OTP ใหม่แล้ว",
-        success:null,
-        phone:req.session.resetPhone
+      step:1, error:"กรอก OTP ผิดหลายครั้งเกินไป กรุณาขอ OTP ใหม่", success:null, phone:null
     });
+  }
 
+  return res.render("volunteer_forgotpassword",{
+    step:2,
+    error:`OTP ไม่ถูกต้อง เหลือโอกาส ${5 - req.session.otpAttempts} ครั้ง`,
+    success:null,
+    phone:req.session.resetPhone
+  });
 }
 
     /* ===== เช็ครหัสผ่าน ===== */
-   const regex =
-/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,20}$/;
+    const regex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,20}$/;
 
-if (!regex.test(password)) {
+    if (!regex.test(password)) {
 
-    await sendNewOTP(req.session.resetPhone, req);
+      await sendNewOTP(req.session.resetPhone, req);
 
-    return res.render("volunteer_forgotpassword",{
-        step:2,
-        error:"รหัสผ่านต้องมี A-Z a-z ตัวเลข และยาว 8-20 ตัว ระบบได้ส่ง OTP ใหม่แล้ว",
-        success:null,
-        phone:req.session.resetPhone
-    });
+      return res.render("volunteer_forgotpassword", {
+        step: 2,
+        error: "รหัสผ่านต้องมี A-Z a-z ตัวเลข และยาว 8-20 ตัว ระบบได้ส่ง OTP ใหม่แล้ว",
+        success: null,
+        phone: req.session.resetPhone
+      });
 
-}
+    }
 
     /* ===== เช็ครหัสตรงกัน ===== */
-if (password !== confirmPassword) {
+    if (password !== confirmPassword) {
 
-    await sendNewOTP(req.session.resetPhone, req);
+      await sendNewOTP(req.session.resetPhone, req);
 
-    return res.render("volunteer_forgotpassword",{
-        step:2,
-        error:"รหัสผ่านไม่ตรงกัน ระบบได้ส่ง OTP ใหม่แล้ว",
-        success:null,
-        phone:req.session.resetPhone
-    });
+      return res.render("volunteer_forgotpassword", {
+        step: 2,
+        error: "รหัสผ่านไม่ตรงกัน ระบบได้ส่ง OTP ใหม่แล้ว",
+        success: null,
+        phone: req.session.resetPhone
+      });
 
-}
+    }
 
     /* ===== HASH PASSWORD ===== */
     const hashed =
@@ -223,8 +233,8 @@ if (password !== confirmPassword) {
     );
 
     /* ===== ล้าง session ===== */
-delete req.session.resetOTP;
-delete req.session.resetPhone;
+    delete req.session.resetOTP;
+    delete req.session.resetPhone;
 
     return res.render("volunteer_forgotpassword", {
       step: 1,

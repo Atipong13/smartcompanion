@@ -4,6 +4,7 @@ const db = require("../config/db");
 const line = require("@line/bot-sdk");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
+const { syncRichMenu } = require("../utils/richMenu");
 /* =========================
    LINE CLIENT
 ========================= */
@@ -14,13 +15,13 @@ const client = new line.Client({
 /* =========================
    MIDDLEWARE CHECK LOGIN
 ========================= */
-function isAdmin(req,res,next){
+function isAdmin(req, res, next) {
 
-  if(!req.session.user){
+  if (!req.session.user) {
     return res.redirect("/login");
   }
 
-  if(req.session.user.role !== "admin"){
+  if (req.session.user.role !== "admin") {
     return res.redirect("/");
   }
 
@@ -95,17 +96,13 @@ router.get("/users", isAdmin, async (req, res) => {
   }
 
 });
-router.get("/edit-user/:id", isAdmin, async (req,res)=>{
-
+router.get("/edit-user/:id", isAdmin, async (req, res) => {
   const id = req.params.id;
-
   const [rows] = await db.query(
-    "SELECT * FROM users WHERE id=?",
+    "SELECT id, name, phone, role, status, area, age, skill, experience, line_user_id FROM users WHERE id=?",
     [id]
   );
-
-  res.render("admin_edituser",{ user:rows[0] });
-
+  res.render("admin_edituser", { user: rows[0] });
 });
 router.post("/edit-user/:id", isAdmin, async (req,res)=>{
 
@@ -117,10 +114,23 @@ router.post("/edit-user/:id", isAdmin, async (req,res)=>{
     [name,role,status,id]
   );
 
+  const [rows] = await db.query(
+    "SELECT line_user_id FROM users WHERE id=?",
+    [id]
+  );
+
+  if (rows.length && rows[0].line_user_id) {
+    try {
+      await syncRichMenu(rows[0].line_user_id);
+    } catch (e) {
+      console.log("Rich menu error:", e.response?.data || e.message);
+    }
+  }
+
   res.redirect("/admin/users");
 
 });
-router.post("/delete-user/:id", isAdmin, async (req,res)=>{
+router.post("/delete-user/:id", isAdmin, async (req, res) => {
 
   const id = req.params.id;
 
@@ -430,7 +440,7 @@ e.name as elderly_name,             v.name as volunteer_name
       LEFT JOIN users e ON h.elder_id = e.id
       LEFT JOIN users v ON h.volunteer_id = v.id
       WHERE h.id = ?
-    `,[id]);
+    `, [id]);
 
     const [messages] = await db.query(`
       SELECT m.*, u.name
@@ -438,9 +448,9 @@ e.name as elderly_name,             v.name as volunteer_name
       JOIN users u ON m.sender_id = u.id
       WHERE m.request_id = ?
       ORDER BY m.created_at ASC
-    `,[id]);
+    `, [id]);
 
-    res.render("admin_reportdetail",{
+    res.render("admin_reportdetail", {
       caseData: caseData[0],
       messages
     });
@@ -469,7 +479,7 @@ router.get("/case-report/:id", isAdmin, async (req, res) => {
       LEFT JOIN users e ON c.line_user_id = e.line_user_id
       LEFT JOIN users v ON c.volunteer_id = v.id
       WHERE c.id = ?
-    `,[id]);
+    `, [id]);
 
     if (!caseRows.length) {
       return res.send("ไม่พบเคสนี้");
@@ -481,9 +491,9 @@ router.get("/case-report/:id", isAdmin, async (req, res) => {
       JOIN users u ON cm.sender_id = u.id
       WHERE cm.case_id = ?
       ORDER BY cm.created_at ASC
-    `,[id]);
+    `, [id]);
 
-    res.render("case-detail",{
+    res.render("case-detail", {
       caseData: caseRows[0],
       messages
     });

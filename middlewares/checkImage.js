@@ -2,22 +2,26 @@ const axios = require("axios");
 require("dotenv").config();
 
 const TOKEN = process.env.LINE_CHANNEL_TOKEN.trim();
-const RICHMENU_ID = "richmenu-469b972fa29fcd8f5402c54cb41b743b";
 
-axios.get(
-  `https://api-data.line.me/v2/bot/richmenu/${RICHMENU_ID}/content`,
-  {
-    headers: {
-      Authorization: `Bearer ${TOKEN}`
-    },
-    responseType: "arraybuffer"
+const menus = {
+  ELDER_MENU_ID:     "richmenu-d003829b8b0e855887e6b0d16d13b01e",
+  VOLUNTEER_MENU_ID: "richmenu-4c00a8ef07910382924ce46b4b1f2d77"
+};
+
+(async () => {
+  for (const [name, id] of Object.entries(menus)) {
+    try {
+      const res = await axios.get(
+        `https://api-data.line.me/v2/bot/richmenu/${id}/content`,
+        {
+          headers: { Authorization: `Bearer ${TOKEN}` },
+          responseType: "arraybuffer"
+        }
+      );
+      console.log(`✅ ${name} (${id}) มีรูปอยู่ | Size:`, res.data.length);
+    } catch (err) {
+      console.log(`❌ ${name} (${id}) ERROR:`, err.response?.status);
+      console.log(err.response?.data?.toString());
+    }
   }
-)
-.then(res => {
-  console.log("✅ มีรูปอยู่");
-  console.log("Size:", res.data.length);
-})
-.catch(err => {
-  console.log("❌", err.response?.status);
-  console.log(err.response?.data?.toString());
-});
+})();

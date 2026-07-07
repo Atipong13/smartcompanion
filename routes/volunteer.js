@@ -2,20 +2,41 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 const { safePush } = require("../utils/safePush");
+const bcrypt = require("bcrypt");
+
 /* ======================
    Middleware ตรวจสิทธิ์อาสา
+   ✅ เพิ่มการเช็คสถานะล่าสุดจาก DB
+   กันกรณีถูกถอดสิทธิ์ (reject/ลบ role) แต่ session เก่ายังไม่หมดอายุ
 ====================== */
-function isVolunteer(req,res,next){
+async function isVolunteer(req, res, next) {
 
-  if(!req.session.user){
+  if (!req.session.user) {
     return res.redirect("/login");
   }
 
-  if(req.session.user.role !== "volunteer"){
+  if (req.session.user.role !== "volunteer") {
     return res.redirect("/");
   }
 
-  next();
+  try {
+    const [rows] = await db.query(
+      "SELECT role, status FROM users WHERE id=?",
+      [req.session.user.id]
+    );
+
+    if (!rows.length || rows[0].role !== "volunteer" || rows[0].status !== "approved") {
+      return req.session.destroy(() => {
+        return res.redirect("/login");
+      });
+    }
+
+    next();
+
+  } catch (err) {
+    console.log("isVolunteer check error:", err);
+    return res.redirect("/login");
+  }
 }
 
 /* ======================
@@ -355,9 +376,9 @@ router.get("/edit-profile", isVolunteer, async (req, res) => {
 
 /* =========================
    อัปเดต โปรไฟล์
+   ✅ เพิ่ม validation แบบเดียวกับตอนสมัคร (auth.js)
+   กันข้อมูล/รหัสผ่านที่ไม่ตรงนโยบายหลุดเข้า DB ผ่านหน้านี้
 ========================= */
-const bcrypt = require("bcrypt");
-
 router.post("/edit-profile", isVolunteer, async (req, res) => {
 
   const volunteerId = req.session.user.id;
@@ -368,20 +389,59 @@ router.post("/edit-profile", isVolunteer, async (req, res) => {
     age,
     area,
     experience,
-    password
+    password,
+    confirm
   } = req.body;
 
-  const skills =
-    req.body["skill[]"] || [];
+  const skills = req.body["skill[]"] || [];
+
+  const rerender = async (error) => {
+    const [rows] = await db.query("SELECT * FROM users WHERE id=?", [volunteerId]);
+    return res.render("volunteer_editprofile", {
+      user: rows[0],
+      success: null,
+      error
+    });
+  };
+
+  // ✅ ชื่อต้องเป็นภาษาไทยเท่านั้น (เหมือนตอนสมัคร)
+  const thaiNameRegex = /^[ก-๙\s]+$/;
+  if (!name || !thaiNameRegex.test(name)) {
+    return rerender("กรุณากรอกชื่อเป็นภาษาไทยเท่านั้น");
+  }
+
+  // ✅ เบอร์โทร 10 หลัก ตัวเลขเท่านั้น
+  const phoneRegex = /^[0-9]{10}$/;
+  if (!phone || !phoneRegex.test(phone)) {
+    return rerender("เบอร์โทรต้องเป็นตัวเลข 10 หลักเท่านั้น");
+  }
+
+  // ✅ อายุ ต้องเป็นตัวเลข 2 หลักเท่านั้น
+  const ageRegex = /^[0-9]{2}$/;
+  if (!age || !ageRegex.test(age)) {
+    return rerender("อายุต้องเป็นตัวเลข 2 หลักเท่านั้น");
+  }
+
+  if (!area) {
+    return rerender("กรุณาเลือกพื้นที่");
+  }
 
   /* ======================
-     ถ้ามีเปลี่ยนรหัสผ่าน
+     ถ้ามีเปลี่ยนรหัสผ่าน → ตรวจตามนโยบายเดิม
   ====================== */
+  if (password && password.trim() !== "") {
 
-  if(password && password.trim() !== ""){
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
 
-    const hashed =
-      await bcrypt.hash(password, 10);
+    if (!passwordRegex.test(password)) {
+      return rerender("รหัสผ่านต้องมีอย่างน้อย 8 ตัว และมี A-Z a-z และตัวเลข ห้ามใช้ภาษาไทย");
+    }
+
+    if (password !== confirm) {
+      return rerender("รหัสผ่านไม่ตรงกัน");
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
 
     await db.query(
       `UPDATE users
@@ -399,7 +459,7 @@ router.post("/edit-profile", isVolunteer, async (req, res) => {
         phone,
         age,
         area,
-        skills.join(","),
+        Array.isArray(skills) ? skills.join(",") : skills,
         experience,
         hashed,
         volunteerId
@@ -425,7 +485,7 @@ router.post("/edit-profile", isVolunteer, async (req, res) => {
         phone,
         age,
         area,
-        skills.join(","),
+        Array.isArray(skills) ? skills.join(",") : skills,
         experience,
         volunteerId
       ]
