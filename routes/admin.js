@@ -493,7 +493,7 @@ router.get("/case-report/:id", isAdmin, async (req, res) => {
       ORDER BY cm.created_at ASC
     `, [id]);
 
-    res.render("case-detail", {
+    res.render("volunteer_casedetail", {
       caseData: caseRows[0],
       messages
     });

@@ -48,7 +48,7 @@ setTimeout(() => {
     if (err) console.error("❌ ลบไม่ได้:", err.message);
     else console.log("🗑 ลบไฟล์แล้ว:", baseName);
   });
-}, 10000);
+}, 200000);
 
 resolve({ url: `/audio/${baseName}.m4a`, duration: durationMs });
 
