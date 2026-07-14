@@ -20,6 +20,21 @@ const { handleCasePostback } = require("./handlers/caseHandler");
 const { handleCaseChat }     = require("./handlers/chatHandler");
 const { handleAIText, handleAIAudio } = require("./handlers/aiHandler");
 
+/* ================= ENV CHECK ================= */
+// ✅ เช็ค env ที่จำเป็นตอน start เพื่อ fail เร็วแทนที่จะพังกลางทางตอนมี user ใช้งานจริง
+const REQUIRED_ENV = [
+  "LINE_CHANNEL_SECRET",
+  "LINE_CHANNEL_TOKEN",
+  "BASE_URL",
+  "SESSION_SECRET"
+];
+const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missingEnv.length) {
+  console.error("❌ ขาด environment variables:", missingEnv.join(", "));
+  process.exit(1);
+}
+const BASE_URL = process.env.BASE_URL.trim();
+
 /* ================= APP SETUP ================= */
 const app        = express();
 const userStates = {};
@@ -70,50 +85,50 @@ cron.schedule("* * * * *", async () => {
   try {
     const now = new Date();
 
-// แจ้งเตือนกิจกรรม
-const [rows] = await db.query(`
-  SELECT a.*, u.line_user_id FROM activities a
-  JOIN users u ON a.created_by=u.id
-  WHERE a.status='pending' AND a.activity_time <= ?
-  AND (a.last_notified_at IS NULL OR TIMESTAMPDIFF(MINUTE, a.last_notified_at, NOW()) >= 2)
-`, [now]);
+    // แจ้งเตือนกิจกรรม
+    const [rows] = await db.query(`
+      SELECT a.*, u.line_user_id FROM activities a
+      JOIN users u ON a.created_by=u.id
+      WHERE a.status='pending' AND a.activity_time <= ?
+      AND (a.last_notified_at IS NULL OR TIMESTAMPDIFF(MINUTE, a.last_notified_at, NOW()) >= 2)
+    `, [now]);
 
-for (const act of rows) {
-  try {
-    // ตรวจสอบข้อมูลก่อน push
-    if (!act.line_user_id) {
-      console.log("⚠️ ไม่มี line_user_id, ข้าม activity id:", act.id);
-      continue;
-    }
-    if (!act.title) {
-      console.log("⚠️ ไม่มี title, ข้าม activity id:", act.id);
-      continue;
-    }
+    for (const act of rows) {
+      try {
+        // ตรวจสอบข้อมูลก่อน push
+        if (!act.line_user_id) {
+          console.log("⚠️ ไม่มี line_user_id, ข้าม activity id:", act.id);
+          continue;
+        }
+        if (!act.title) {
+          console.log("⚠️ ไม่มี title, ข้าม activity id:", act.id);
+          continue;
+        }
 
-    const title = act.title.substring(0, 40);  // LINE limit 40 ตัว
-    const text  = act.title.substring(0, 60);  // LINE limit 60 ตัว
+        const title = act.title.substring(0, 40);  // LINE limit 40 ตัว
+        const text  = act.title.substring(0, 60);  // LINE limit 60 ตัว
 
-    console.log("📤 Push to:", act.line_user_id, "| activity:", act.id, "|", title);
+        console.log("📤 Push to:", act.line_user_id, "| activity:", act.id, "|", title);
 
-    await safePush(act.line_user_id, {
-      type: "template",
-      altText: "แจ้งเตือนกิจกรรม: " + title,
-      template: {
-        type: "buttons",
-        title: "⏰ " + title,
-        text: text,
-        actions: [{ type: "postback", label: "รับทราบ", data: "ack_" + act.id }]
+        await safePush(act.line_user_id, {
+          type: "template",
+          altText: "แจ้งเตือนกิจกรรม: " + title,
+          template: {
+            type: "buttons",
+            title: "⏰ " + title,
+            text: text,
+            actions: [{ type: "postback", label: "รับทราบ", data: "ack_" + act.id }]
+          }
+        });
+
+        await db.query("UPDATE activities SET last_notified_at=NOW() WHERE id=?", [act.id]);
+        await new Promise(r => setTimeout(r, 800));
+
+      } catch (err) {
+        console.log("❌ Push Error activity id:", act.id);
+        console.log("❌ Detail:", JSON.stringify(err.response?.data, null, 2) || err.message);
       }
-    });
-
-    await db.query("UPDATE activities SET last_notified_at=NOW() WHERE id=?", [act.id]);
-    await new Promise(r => setTimeout(r, 800));
-
-  } catch (err) {
-    console.log("❌ Push Error activity id:", act.id);
-    console.log("❌ Detail:", JSON.stringify(err.response?.data, null, 2) || err.message);
-  }
-}
+    }
 
     // ออก AI mode อัตโนมัติ (ไม่โต้ตอบ 2 นาที)
     const [expired] = await db.query(`
@@ -128,8 +143,10 @@ for (const act of rows) {
     }
   } catch (err) {
     console.log("❌ Cron error:", err);
+  } finally {
+    // ✅ ใช้ finally กัน cronRunning ค้าง true ตลอดไปถ้ามี error หลุดจาก try
+    cronRunning = false;
   }
-  cronRunning = false;
 });
 
 /* ================= WEBHOOK ================= */
@@ -158,23 +175,23 @@ async function handleEvent(event) {
   }
 
   // ดึง/สร้าง user
-  const [users] = await db.query("SELECT * FROM users WHERE line_user_id=?", [userId]);
-  let user;
+  // ✅ ป้องกัน race condition (webhook ซ้ำ/ข้อความติดกันเร็ว) ด้วย INSERT ... ON DUPLICATE KEY UPDATE
+  // หมายเหตุ: ต้องมี UNIQUE KEY บนคอลัมน์ line_user_id ในตาราง users
+  await db.query(
+    `INSERT INTO users (line_user_id, name, role, status)
+     VALUES (?, ?, 'elder', 'approved')
+     ON DUPLICATE KEY UPDATE line_user_id = line_user_id`,
+    [userId, name ?? userId]
+  );
 
-  if (!users.length) {
-    // user ใหม่ ถ้าไม่รู้ชื่อ ใช้ userId แทนชั่วคราว
-    const [result] = await db.query(
-      "INSERT INTO users (line_user_id, name, role, status) VALUES (?, ?, 'elder', 'approved')",
-      [userId, name ?? userId]
-    );
-    user = { id: result.insertId, line_user_id: userId, role: "elder", status: "approved" };
-} else {
+  const [users] = await db.query("SELECT * FROM users WHERE line_user_id=?", [userId]);
+  let user = users[0];
+
   // ✅ อัปเดตชื่อจาก LINE เฉพาะกรณีที่ user ยังไม่เคยตั้งชื่อเอง (ชื่อว่าง หรือเป็น userId เดิม)
-  if (name && (!users[0].name || users[0].name === userId)) {
+  if (name && (!user.name || user.name === userId)) {
     await db.query("UPDATE users SET name=? WHERE line_user_id=?", [name, userId]);
+    user.name = name;
   }
-  user = users[0];
-}
 
   // follow
   if (event.type === "follow") {
@@ -236,10 +253,27 @@ async function handleEvent(event) {
       }
 
       if (msg === "สมัครอาสา") {
+        // ✅ กันไม่ให้ downgrade role โดยไม่ตั้งใจ (admin หรือ volunteer ที่ approved อยู่แล้ว)
+        if (user.role === "admin") {
+          return client.replyMessage(event.replyToken, {
+            type: "text", text: "บัญชีนี้เป็นแอดมินอยู่แล้วค่ะ ไม่สามารถสมัครเป็นอาสาซ้ำได้"
+          });
+        }
+        if (user.role === "volunteer" && user.status === "approved") {
+          return client.replyMessage(event.replyToken, {
+            type: "text", text: "คุณเป็นอาสาที่ได้รับอนุมัติอยู่แล้วนะคะ 🙏"
+          });
+        }
+        if (user.role === "volunteer" && user.status === "pending") {
+          return client.replyMessage(event.replyToken, {
+            type: "text", text: "ใบสมัครของคุณอยู่ระหว่างรอ admin อนุมัติค่ะ ⏳"
+          });
+        }
+
         await db.query("UPDATE users SET role='volunteer', status='pending' WHERE line_user_id=?", [userId]);
-const regToken = sign(userId);
-const registerUrl = process.env.BASE_URL.trim() +
-  "/volunteer/register?uid=" + userId + "&token=" + regToken;        const imageUrl    = process.env.BASE_URL.trim() + "/images/smart.jpg";
+        const regToken   = sign(userId);
+        const registerUrl = BASE_URL + "/volunteer/register?uid=" + userId + "&token=" + regToken;
+        const imageUrl     = BASE_URL + "/images/smart.jpg";
         return client.replyMessage(event.replyToken, {
           type: "flex", altText: "สมัครเป็นอาสา SmartCompanion",
           contents: {
@@ -428,7 +462,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use("/images", express.static("images"));
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,

@@ -383,11 +383,21 @@ data-detail="<%= (item.detail || '').toLowerCase() %>"      >
         <div class="case-top">
 
           <div class="case-id">
-            👴 Elder #<%= item.elder_id %>
+            👴 <%= item.elderly_name || ('Elder #' + item.elder_id) %>
           </div>
 
-          <div class="badge <%= item.status %>">
-            <%= item.status %>
+          <div style="display:flex;gap:8px;align-items:center;">
+
+            <% if(item.source === 'ai'){ %>
+              <span class="badge" style="background:#dc262633;color:#f87171;">
+                🚨 ด่วนจาก AI
+              </span>
+            <% } %>
+
+            <div class="badge <%= item.status %>">
+              <%= item.status %>
+            </div>
+
           </div>
 
         </div>

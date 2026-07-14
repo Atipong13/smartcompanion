@@ -266,8 +266,16 @@ router.post("/volunteer/register", async (req, res) => {
     return res.send("ข้อมูลไม่ครบ");
   }
 
-  // ✅ ป้องกันไม่ให้แก้ข้อมูล/รหัสผ่านของ line_user_id คนอื่น
-  if (!verify(lineid, token)) {
+// ✅ ป้องกันไม่ให้แก้ข้อมูล/รหัสผ่านของ line_user_id คนอื่น
+  let isValidToken = false;
+  try {
+    isValidToken = verify(lineid, token);
+  } catch (err) {
+    console.error("❌ Token verify error:", err.message);
+    isValidToken = false;
+  }
+
+  if (!isValidToken) {
     return res.send("ลิงก์หมดอายุหรือไม่ถูกต้อง กรุณากดสมัครใหม่จาก LINE อีกครั้ง");
   }
 if (!area || !skill || !experience) {

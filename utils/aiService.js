@@ -1,11 +1,11 @@
-// utils/aiService.js
 const axios = require("axios");
 
 const MAX_MESSAGE_LENGTH = 1000; // กันข้อความยาวเกินไป (DoS/cost)
+const AI_TIMEOUT_MS = 30000;     // เพิ่มจาก 15s -> 30s กันเครื่องช้า/cold start
 
 const askAI = async (message) => {
 
-  // ✅ กันข้อความยาวเกินไปก่อนส่งเข้า AI
+  // กันข้อความยาวเกินไปก่อนส่งเข้า AI
   const safeMessage = String(message || "").slice(0, MAX_MESSAGE_LENGTH);
 
   try {
@@ -55,7 +55,7 @@ ${safeMessage}
         stream: false,
         options: { temperature: 0.1, num_predict: 300 }
       },
-      { timeout: 15000 } // ✅ กัน request ค้างไม่จำกัดเวลา
+      { timeout: AI_TIMEOUT_MS } // ✅ กัน request ค้างไม่จำกัดเวลา
     );
 
     const cleanText = response.data.response
@@ -73,7 +73,7 @@ ${safeMessage}
       risk,
       // ✅ ถ้า risk สูง แต่ AI ลืมตั้ง notify_volunteer ให้ true อัตโนมัติ (safety net)
       notify_volunteer: parsed.notify_volunteer ?? (risk === "high" || risk === "emergency"),
-      symptoms:         parsed.symptoms         || [],
+      symptoms:         Array.isArray(parsed.symptoms) ? parsed.symptoms : [],
       body_part:        parsed.body_part        || "-",
       possible_cause:   parsed.possible_cause   || "-",
       advice:           parsed.advice           || "-",
@@ -81,16 +81,31 @@ ${safeMessage}
     };
 
   } catch (err) {
-    console.log("askAI error:", err.response?.data || err.message);
+    // ✅ แยกประเภท error เพื่อ log/แจ้งเตือนให้ตรงสาเหตุ
+    const isTimeout      = err.code === "ECONNABORTED" || /timeout/i.test(err.message || "");
+    const isConnRefused  = err.code === "ECONNREFUSED";
+    const isJsonParseErr = err instanceof SyntaxError;
 
-    // ✅ FAIL-SAFE: ถ้า AI ใช้งานไม่ได้ ให้ถือว่าต้องแจ้งอาสาไว้ก่อนเสมอ
+    let reason = "unknown";
+    if (isTimeout)      reason = "timeout";
+    else if (isConnRefused)  reason = "conn_refused (Ollama อาจไม่ได้รันอยู่)";
+    else if (isJsonParseErr) reason = "json_parse_error (AI ตอบไม่เป็น JSON)";
+
+    console.log("askAI error:", reason, "|", err.response?.data || err.message);
+
+    // ✅ FAIL-SAFE: ถ้า AI ใช้งานไม่ได้ไม่ว่าสาเหตุใด ให้ถือว่าต้องแจ้งอาสาไว้ก่อนเสมอ
     // (ปลอดภัยกว่าเงียบแล้วปล่อยผ่านเคสฉุกเฉินไป)
+    const reply = isTimeout
+      ? "ขออภัยค่ะ ระบบประมวลผลช้ากว่าปกติ เพื่อความปลอดภัยจึงแจ้งอาสาให้ช่วยตรวจสอบแทนนะคะ 🙏"
+      : "ขออภัยค่ะ ระบบ AI มีปัญหาชั่วคราว เพื่อความปลอดภัย ระบบได้แจ้งอาสาให้ช่วยตรวจสอบอาการของคุณแล้วนะคะ 🙏";
+
     return {
       risk: "medium",
       notify_volunteer: true,
       symptoms: [], body_part: "-",
       possible_cause: "-", advice: "-",
-      reply: "ขออภัยค่ะ ระบบ AI มีปัญหาชั่วคราว เพื่อความปลอดภัย ระบบได้แจ้งอาสาให้ช่วยตรวจสอบอาการของคุณแล้วนะคะ 🙏"
+      reply,
+      _error_reason: reason // เผื่ออยากใช้ log/debug ปลายทาง (ไม่กระทบ user)
     };
   }
 };

@@ -40,6 +40,42 @@ const handleCasePostback = async (event, user, client, userStates) => {
       return { type: "text", text: "❌ มีอาสาคนอื่นรับเคสนี้แล้ว" };
     }
 
+    // ✅ แจ้งผู้สูงอายุว่ามีอาสารับเคสแล้ว พร้อมข้อมูลอาสา
+    const elderLineIdForNotify = caseData[0].line_user_id;
+    if (elderLineIdForNotify) {
+      await safePush(elderLineIdForNotify, {
+        type: "flex",
+        altText: "มีอาสารับเคสของคุณแล้ว",
+        contents: {
+          type: "bubble",
+          body: {
+            type: "box",
+            layout: "vertical",
+            spacing: "md",
+            contents: [
+              { type: "text", text: "✅ มีอาสารับเคสของคุณแล้ว", weight: "bold", size: "lg", color: "#27ae60" },
+              { type: "separator" },
+              { type: "text", text: "👤 อาสา: " + (user.name || "-"), size: "md" },
+              { type: "text", text: "📞 โทร: " + (user.phone || "-"), size: "md" },
+              { type: "text", text: "💬 สามารถกดปุ่มด้านล่างเพื่อพูดคุยกับอาสาได้ทันที", size: "xs", color: "#888888", wrap: true, margin: "md" }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                color: "#06C755",
+                action: { type: "message", label: "💬 พูดคุยกับอาสา", text: "พูดคุยกับอาสา" }
+              }
+            ]
+          }
+        }
+      });
+    }
+
     const latNum = parseFloat(caseData[0].lat);
     const lngNum = parseFloat(caseData[0].lng);
     if (latNum && lngNum && !isNaN(latNum) && !isNaN(lngNum)) {

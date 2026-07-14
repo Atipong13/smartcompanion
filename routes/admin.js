@@ -268,13 +268,38 @@ router.get("/working", isAdmin, async (req, res) => {
 
   try {
 
-    const [rows] = await db.query(`
-      SELECT hr.*, u.name AS volunteer_name
+    // เคสปกติจาก help_requests
+    const [normalRows] = await db.query(`
+      SELECT hr.id,
+             hr.detail AS detail,
+             hr.status,
+             hr.urgency,
+             u.name AS volunteer_name,
+             e.name AS elderly_name,
+             'normal' AS source
       FROM help_requests hr
       LEFT JOIN users u ON hr.volunteer_id = u.id
+      LEFT JOIN users e ON hr.elder_id = e.id
       WHERE hr.status='accepted'
-      ORDER BY hr.id DESC
     `);
+
+    // เคสด่วนจาก AI จากตาราง cases
+    const [aiRows] = await db.query(`
+      SELECT c.id,
+             c.message AS detail,
+             c.status,
+             c.risk AS urgency,
+             v.name AS volunteer_name,
+             e.name AS elderly_name,
+             'ai' AS source
+      FROM cases c
+      LEFT JOIN users v ON c.volunteer_id = v.id
+      LEFT JOIN users e ON c.line_user_id = e.line_user_id
+      WHERE c.status='accepted'
+    `);
+
+    const rows = [...aiRows, ...normalRows]
+      .sort((a, b) => b.id - a.id);
 
     res.render("admin_working", { data: rows || [] });
 
