@@ -19,7 +19,6 @@ const handleCaseChat = async (event, userId, userStates, client) => {
   /* ===== TEXT ===== */
   if (event.message?.type === "text") {
     if (state.role === "volunteer") {
-      // ✅ แก้ตรงนี้
       const fileName = `tts_${Date.now()}`;
       const voice = await generateVoice(event.message.text, fileName);
       const audioUrl = `${process.env.BASE_URL}${voice.url}`;
@@ -29,7 +28,6 @@ const handleCaseChat = async (event, userId, userStates, client) => {
         { type: "audio", originalContentUrl: audioUrl, duration: voice.duration }
       ]);
 
-      // ✅ เพิ่ม: บันทึกลง case_messages (คนละตารางกับ messages ของ help_requests ปกติ)
       await logCaseMessage(state.caseId, state.dbUserId, event.message.text, "text");
 
       return { type: "text", text: "✅ ส่งข้อความและเสียงแล้ว" };
@@ -37,7 +35,6 @@ const handleCaseChat = async (event, userId, userStates, client) => {
 
     await safePush(state.partnerId, { type: "text", text: "👵 ผู้สูงอายุ\n" + event.message.text });
 
-    // ✅ เพิ่ม
     await logCaseMessage(state.caseId, state.dbUserId, event.message.text, "text");
 
     return { type: "text", text: "✅ ส่งข้อความแล้ว" };
@@ -64,13 +61,12 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       duration: event.message.duration || 10000
     });
 
-    // ✅ เพิ่ม: เก็บ placeholder (ไฟล์เสียงจริงถูกลบทิ้งหลัง 10 วิ เก็บไฟล์ไม่ได้)
     await logCaseMessage(state.caseId, state.dbUserId, "[ข้อความเสียง]", "audio");
 
-    // ✅ ลบไฟล์หลัง 10 วินาที
+    //  ลบไฟล์
     setTimeout(() => {
       fs.unlink(filePath, () => console.log("🗑 ลบไฟล์เสียงแล้ว:", fileName));
-    }, 10000);
+    }, 30000);
 
     return { type: "text", text: "✅ ส่งเสียงแล้ว" };
   }
@@ -83,7 +79,6 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       previewImageUrl: `${process.env.BASE_URL}/proxy/${event.message.id}`
     });
 
-    // ✅ เพิ่ม
     await logCaseMessage(state.caseId, state.dbUserId, "[รูปภาพ]", "image");
 
     return { type: "text", text: "✅ ส่งรูปแล้ว" };
@@ -115,7 +110,6 @@ const handleCaseChat = async (event, userId, userStates, client) => {
       }
     });
 
-    // ✅ เพิ่ม
     await logCaseMessage(state.caseId, state.dbUserId, `[ตำแหน่ง] ${lat},${lng}`, "location");
 
     return { type: "text", text: "✅ ส่งตำแหน่งแล้ว" };

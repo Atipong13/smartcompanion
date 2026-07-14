@@ -1,4 +1,3 @@
-// handlers/aiHandler.js
 const fs = require("fs");
 const path = require("path");
 const db = require("../config/db");
@@ -62,7 +61,7 @@ const notifyVolunteers = async (msg, aiReply, userId) => {
 
 // ตอบกลับพร้อมเสียง
 const replyWithVoice = async (client, event, aiReply, hasNotified) => {
-  const filename = `ai_${Date.now()}`;              // ✅ ไม่ต้องใส่ .mp3 แล้ว
+  const filename = `ai_${Date.now()}`;              
   const voice = await generateVoice(aiReply.reply, filename); // ✅ รับเป็น object
   const audioUrl = `${process.env.BASE_URL}${voice.url}`;     // ✅ เอาแค่ .url
 
@@ -70,7 +69,7 @@ const replyWithVoice = async (client, event, aiReply, hasNotified) => {
     { 
       type: "audio", 
       originalContentUrl: audioUrl, 
-      duration: voice.duration   // ✅ duration จริง ไม่ใช่ 15000
+      duration: voice.duration  
     },
     {
       type: "text",

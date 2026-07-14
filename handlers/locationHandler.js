@@ -1,4 +1,3 @@
-// handlers/locationHandler.js
 const db  = require("../config/db");
 const { safePush } = require("../utils/safePush");
 

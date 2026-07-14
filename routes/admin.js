@@ -374,9 +374,6 @@ router.get("/reports", isAdmin, async (req, res) => {
     `);
 
     // ===== AI High Risk / Emergency =====
-    // NOTE: table name assumed as "messages" based on the columns
-    // (id, message, risk, status, assigned_to, created_at, volunteer_id, lat, lng, line_user_id)
-    // แก้ชื่อตารางตรงนี้ถ้าจริงๆไม่ใช่ "messages"
 
     const highRiskWhere = where
       ? where.replace(/created_at/g, "m.created_at") + " AND m.risk IN ('high','emergency')"
@@ -487,9 +484,6 @@ e.name as elderly_name,             v.name as volunteer_name
 
 /* =========================
    CASE DETAIL (เคส AI)
-   /admin/case-report/:id
-   แยกจาก /admin/reports/:id เพราะ cases.id กับ help_requests.id
-   เป็นคนละ sequence กัน ใช้ id เดียวกันปนกันไม่ได้
 ========================= */
 router.get("/case-report/:id", isAdmin, async (req, res) => {
   try {

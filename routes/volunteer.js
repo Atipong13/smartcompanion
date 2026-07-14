@@ -6,8 +6,6 @@ const bcrypt = require("bcrypt");
 
 /* ======================
    Middleware ตรวจสิทธิ์อาสา
-   ✅ เพิ่มการเช็คสถานะล่าสุดจาก DB
-   กันกรณีถูกถอดสิทธิ์ (reject/ลบ role) แต่ session เก่ายังไม่หมดอายุ
 ====================== */
 async function isVolunteer(req, res, next) {
 
@@ -376,8 +374,7 @@ router.get("/edit-profile", isVolunteer, async (req, res) => {
 
 /* =========================
    อัปเดต โปรไฟล์
-   ✅ เพิ่ม validation แบบเดียวกับตอนสมัคร (auth.js)
-   กันข้อมูล/รหัสผ่านที่ไม่ตรงนโยบายหลุดเข้า DB ผ่านหน้านี้
+
 ========================= */
 router.post("/edit-profile", isVolunteer, async (req, res) => {
 

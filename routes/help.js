@@ -567,7 +567,7 @@ if (data.startsWith("request_location_")) {
     return { type: "text", text: "❌ caseId ไม่ถูกต้อง" };
   }
 
-  //  ✅ เช็คว่าเคสนี้ยังเปิดอยู่ไหม และเป็นอาสาที่รับเคสนี้จริง
+  //   เช็คว่าเคสนี้ยังเปิดอยู่ไหม และเป็นอาสาที่รับเคสนี้จริง
   const [check] = await db.query(
     "SELECT id, status, elder_id FROM help_requests WHERE id=? AND volunteer_id=?",
     [caseId, user.id]

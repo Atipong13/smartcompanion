@@ -28,7 +28,7 @@ function verify(lineid, token) {
     const hmacBuf = Buffer.from(hmac, "hex");
     const expectedBuf = Buffer.from(expected, "hex");
 
-    // ✅ ป้องกัน error ตอนความยาว buffer ไม่เท่ากัน
+    //  ป้องกัน error ตอนความยาว buffer ไม่เท่ากัน
     if (hmacBuf.length !== expectedBuf.length) return false;
 
     return crypto.timingSafeEqual(hmacBuf, expectedBuf);

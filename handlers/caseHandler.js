@@ -8,7 +8,7 @@ const handleCasePostback = async (event, user, client, userStates) => {
   /* ================= รับเคส ================= */
   if (data.startsWith("accept_case_")) {
 
-    // ✅ ต้องเป็นอาสาที่ได้รับอนุมัติแล้วเท่านั้น ถึงจะรับเคสได้
+    //  ต้องเป็นอาสาที่ได้รับอนุมัติแล้วเท่านั้น ถึงจะรับเคสได้
     if (user.role !== "volunteer" || user.status !== "approved") {
       return { type: "text", text: "❌ คุณไม่มีสิทธิ์รับเคสนี้" };
     }
@@ -40,7 +40,7 @@ const handleCasePostback = async (event, user, client, userStates) => {
       return { type: "text", text: "❌ มีอาสาคนอื่นรับเคสนี้แล้ว" };
     }
 
-    // ✅ แจ้งผู้สูงอายุว่ามีอาสารับเคสแล้ว พร้อมข้อมูลอาสา
+    // แจ้งผู้สูงอายุว่ามีอาสารับเคสแล้ว พร้อมข้อมูลอาสา
     const elderLineIdForNotify = caseData[0].line_user_id;
     if (elderLineIdForNotify) {
       await safePush(elderLineIdForNotify, {
@@ -150,14 +150,14 @@ const handleCasePostback = async (event, user, client, userStates) => {
     );
     if (!caseData.length) return { type: "text", text: "❌ ไม่พบเคสนี้" };
 
-    // ✅ ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะเปิดแชทได้
+    //  ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะเปิดแชทได้
     if (String(caseData[0].volunteer_id) !== String(user.id)) {
       return { type: "text", text: "❌ คุณไม่มีสิทธิ์เปิดแชทเคสนี้" };
     }
 
     const elderLineId = caseData[0].line_user_id;
 
-    // ✅ หา users.id ของผู้สูงอายุ (user.id ของอาสามีอยู่แล้วใน `user` object)
+    //  หา users.id ของผู้สูงอายุ (user.id ของอาสามีอยู่แล้วใน user)
     const [elderUser] = await db.query(
       "SELECT id FROM users WHERE line_user_id=?",
       [elderLineId]
@@ -200,7 +200,7 @@ const handleCasePostback = async (event, user, client, userStates) => {
     const [caseData] = await db.query("SELECT line_user_id, status, volunteer_id FROM cases WHERE id=?", [caseId]);
     if (!caseData.length) return { type: "text", text: "❌ ไม่พบเคสนี้" };
 
-    // ✅ ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น ถึงจะจบเคสได้
+    //  ต้องเป็นอาสาที่รับเคสนี้จริงเท่านั้น
     if (String(caseData[0].volunteer_id) !== String(user.id)) {
       return { type: "text", text: "❌ คุณไม่มีสิทธิ์จบเคสนี้" };
     }
@@ -211,7 +211,6 @@ const handleCasePostback = async (event, user, client, userStates) => {
 
     const elderLineId = caseData[0].line_user_id;
 
-    // ✅ ผูก volunteer_id ในเงื่อนไข UPDATE ด้วย กันจบเคสซ้อนจากอาสาคนอื่น
     await db.query(
       "UPDATE cases SET status='done' WHERE id=? AND volunteer_id=?",
       [caseId, user.id]

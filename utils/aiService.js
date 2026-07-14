@@ -55,7 +55,7 @@ ${safeMessage}
         stream: false,
         options: { temperature: 0.1, num_predict: 300 }
       },
-      { timeout: AI_TIMEOUT_MS } // ✅ กัน request ค้างไม่จำกัดเวลา
+      { timeout: AI_TIMEOUT_MS } //  กัน request ค้างไม่จำกัดเวลา
     );
 
     const cleanText = response.data.response
@@ -65,13 +65,13 @@ ${safeMessage}
 
     const parsed = JSON.parse(cleanText);
 
-    // ✅ กันค่า risk ที่ไม่รู้จัก (AI อาจตอบนอกเหนือรายการที่กำหนด)
+    //  กันค่า risk ที่ไม่รู้จัก (AI อาจตอบนอกเหนือรายการที่กำหนด)
     const validRisks = ["low", "medium", "high", "emergency"];
     const risk = validRisks.includes(parsed.risk) ? parsed.risk : "medium";
 
     return {
       risk,
-      // ✅ ถ้า risk สูง แต่ AI ลืมตั้ง notify_volunteer ให้ true อัตโนมัติ (safety net)
+      // ถ้า risk สูง แต่ AI ลืมตั้ง notify_volunteer ให้ true อัตโนมัติ (safety net)
       notify_volunteer: parsed.notify_volunteer ?? (risk === "high" || risk === "emergency"),
       symptoms:         Array.isArray(parsed.symptoms) ? parsed.symptoms : [],
       body_part:        parsed.body_part        || "-",
@@ -81,7 +81,7 @@ ${safeMessage}
     };
 
   } catch (err) {
-    // ✅ แยกประเภท error เพื่อ log/แจ้งเตือนให้ตรงสาเหตุ
+    //  แยกประเภท error เพื่อ log/แจ้งเตือนให้ตรงสาเหตุ
     const isTimeout      = err.code === "ECONNABORTED" || /timeout/i.test(err.message || "");
     const isConnRefused  = err.code === "ECONNREFUSED";
     const isJsonParseErr = err instanceof SyntaxError;
@@ -93,7 +93,7 @@ ${safeMessage}
 
     console.log("askAI error:", reason, "|", err.response?.data || err.message);
 
-    // ✅ FAIL-SAFE: ถ้า AI ใช้งานไม่ได้ไม่ว่าสาเหตุใด ให้ถือว่าต้องแจ้งอาสาไว้ก่อนเสมอ
+    //  FAIL-SAFE: ถ้า AI ใช้งานไม่ได้ไม่ว่าสาเหตุใด ให้ถือว่าต้องแจ้งอาสาไว้ก่อนเสมอ
     // (ปลอดภัยกว่าเงียบแล้วปล่อยผ่านเคสฉุกเฉินไป)
     const reply = isTimeout
       ? "ขออภัยค่ะ ระบบประมวลผลช้ากว่าปกติ เพื่อความปลอดภัยจึงแจ้งอาสาให้ช่วยตรวจสอบแทนนะคะ 🙏"
